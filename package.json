@@ -9,11 +9,13 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --test \"src/**/*.test.mjs\"",
-    "smoke": "node --env-file=.env.local scripts/nemotron-smoke.mjs"
+    "smoke": "node --env-file=.env.local scripts/nemotron-smoke.mjs",
+    "dry-run": "tsx scripts/dry-run.ts"
   },
   "dependencies": {
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "lucide-react": "^0.469.0",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest"
@@ -24,6 +26,7 @@
     "@types/react-dom": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "tsx": "^4.19.2",
     "typescript": "latest"
   }
 }
