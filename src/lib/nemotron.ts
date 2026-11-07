@@ -11,27 +11,35 @@ export type ToolSpec = {
   function: { name: string; description: string; parameters: Record<string, unknown> };
 };
 
+export const nemotronModel = () => process.env.NEMOTRON_MODEL ?? "nvidia/llama-3.3-nemotron-super-49b-v1.5";
+
+/** Live Nemotron unless there is no key or OPSCREW_MODE=scripted. */
+export const agentMode = (): "live" | "scripted" =>
+  process.env.OPSCREW_MODE === "scripted" || !process.env.NVIDIA_API_KEY ? "scripted" : "live";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function chat(messages: Message[], tools: ToolSpec[]) {
   const key = process.env.NVIDIA_API_KEY;
   if (!key) throw new Error("Missing NVIDIA_API_KEY.");
 
-  const response = await fetch(`${BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: process.env.NEMOTRON_MODEL ?? "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-      messages,
-      tools,
-      tool_choice: "auto",
-      temperature: 0.2,
-      max_tokens: 4096,
-    }),
-  });
-  if (!response.ok) throw new Error(`Nemotron ${response.status}: ${await response.text()}`);
-
-  const data = (await response.json()) as {
-    choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[];
-  };
-  const { content, tool_calls } = data.choices[0].message;
-  return { role: "assistant" as const, content, tool_calls };
+  let lastError = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const response = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(60_000),
+      body: JSON.stringify({ model: nemotronModel(), messages, tools, tool_choice: "auto", temperature: 0.2, max_tokens: 2048 }),
+    });
+    if (response.ok) {
+      const data = (await response.json()) as { choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[] };
+      const { content, tool_calls } = data.choices[0].message;
+      // Some Nemotron variants prefix reasoning in <think> tags; keep the visible answer only.
+      return { role: "assistant" as const, content: content?.replace(/<think>[\s\S]*?<\/think>/g, "").trim() ?? null, tool_calls };
+    }
+    lastError = `Nemotron ${response.status}: ${(await response.text()).slice(0, 300)}`;
+    if (response.status !== 429 && response.status < 500) break; // bad request: retrying won't help
+    await sleep(800 * 2 ** attempt);
+  }
+  throw new Error(lastError);
 }

@@ -18,3 +18,9 @@ export function blastRadius(edges: Edge[], start: string) {
   }
   return reached;
 }
+
+/** Everything `start` depends on (walks edges backwards), nearest first. */
+export function upstreamOf(edges: Edge[], start: string) {
+  const reversed = edges.map((e) => ({ upstream: e.downstream, downstream: e.upstream, relation: e.relation }));
+  return blastRadius(reversed, start);
+}

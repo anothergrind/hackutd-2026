@@ -1,68 +1,64 @@
-# Invisible Network — HackUTD 2026 (CBRE × NVIDIA)
+# OpsCrew — HackUTD 2026 (CBRE × NVIDIA × NMC²)
 
-Building systems (power → cooling → spaces → tenants) modeled as a dependency graph.
-When a signal arrives (sensor anomaly, BMS cyber event, maintenance ticket), a **Nemotron agent**
-inspects the asset across data sources, walks the graph to predict the cascade, prices the
-SLA exposure, checks live weather, and **executes** work orders and tenant notices.
-See [PLAN.md](PLAN.md) for the pitch, demo script and task split.
+Five Nemotron agents that catch a building failure early, price it, and fix it after a manager approves.
+A **Lead agent** reads building memory, sends **Ticket Triage**, **Sensor Watch** and **Lease / SLA** off in
+parallel, prices the cost of waiting vs fixing now, and has **Dispatch** draft the work order, schedule change and
+tenant notices. Every side effect waits in the **approval queue**. A **nightly sweep** scores every building and
+starts the crew on its own, with no prompt typed. The UI reuses the HackTX NMC³ console design.
 
-## Setup
+## Run it (zero setup)
 
-1. `npm install`
-2. Copy `.env.example` → `.env.local` and fill in:
-   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (already done)
-   - `SUPABASE_SERVICE_ROLE_KEY`: Supabase → Project Settings → API Keys → `service_role`/secret key.
-     Server-only; never prefix with `NEXT_PUBLIC_`, never commit it.
-   - `NVIDIA_API_KEY`: build.nvidia.com → open any Nemotron model → "Get API Key".
-3. In the Supabase SQL Editor, run the migrations **in order**: `001` … `004_invisible_network.sql`.
-4. `npm run smoke`: lists the Nemotron models your key can use and checks that tool calling works.
-   If it prints FAIL, set `NEMOTRON_MODEL` to another model from the list and rerun.
-5. Restart `npm run dev` (env changes need a restart), open http://localhost:3000 → **Simulate** tab → click a scenario.
-
-`npm test` runs the graph unit test. `npm run typecheck` checks types.
-
-**Reset demo state** (run in SQL Editor before judging):
-
-```sql
-update assets set status = 'ok';
-delete from work_orders; delete from tenant_notices;
-delete from telemetry_events where id in (select event_id from agent_runs); -- injected signals only
-delete from agent_runs;
+```bash
+npm install
+npm run dev          # http://localhost:3000, in-memory data, scripted agents
 ```
 
-**If you deploy publicly:** `/api/simulate` writes with the service-role key and spends NVIDIA credits, so anyone can trigger it. That's fine for judging; take it down afterwards.
+Click **Inject** on *Cooling cascade*, watch the graph, then approve the drafts. `npm run dry-run` runs the same
+flow in the terminal and prints every step.
+
+## Go live
+
+1. Copy `.env.example` to `.env.local`.
+2. **Nemotron:** set `NVIDIA_API_KEY`, then `npm run smoke` to check tool calling. The rail badge switches from `DEMO` to `NIM`.
+3. **Supabase:** set the URL plus the anon and service-role keys, and run `supabase/migrations/001`–`005` in order in the SQL editor.
+4. Restart `npm run dev`.
+
+If Nemotron errors mid-run, that agent falls back to the scripted policy (same tools, same data) unless it has
+already drafted something. Set `OPSCREW_MODE=scripted` to force the fallback on stage.
+
+## Pages
+
+| Page | What |
+|---|---|
+| `/` | Incident console: scenarios, sweep, live crew graph, lane timeline, risk, drafts, step log |
+| `/approvals` | Queue: edit, approve (executes) or reject every drafted action |
+| `/portfolio` | Sweep scores, each building's dependency chain, tenants and $/hr, work orders sent |
+| `/runs`, `/runs/[id]` | History and step-by-step replay |
+| `/memory` | What past runs learned plus manager notes; the lead reads this first |
+| `/crew` | Agents, what each owns, and their tools |
 
 ## Code map
 
 ```
-supabase/migrations/
-  003_risk_platform.sql        properties, maintenance_tickets, energy_readings, incidents
-  004_invisible_network.sql    assets (graph nodes), dependencies (edges), tenants (SLA $/hr),
-                               telemetry_events, agent_runs, agent_steps, work_orders, tenant_notices + seed
-src/lib/
-  nemotron.ts                  chat() — fetch to NVIDIA's OpenAI-compatible endpoint
-  agent/graph.ts               blastRadius() — BFS over dependency edges (pure, tested)
-  agent/tools.ts               tool schemas + implementations the model can call
-  agent/run.ts                 the agent loop: chat → tool calls → log step → repeat (max 10 turns)
-  supabase/admin.ts            service-role client for server writes
-src/app/
-  api/simulate/route.ts        POST signal → insert event → start agent in background → {run_id}
-  api/agent/runs/[id]/route.ts GET run + steps (UI polls this)
-  SimulatePanel.tsx            scenario buttons + live agent trace
-  page.tsx                     dashboard tabs
-scripts/nemotron-smoke.mjs     run first: verifies key, model, tool calling
+src/lib/roster.ts            agents and their tools (UI and server share it)
+src/lib/scenarios.ts         demo incidents + hints for the scripted mode
+src/lib/agent/run.ts         agent loop: Nemotron tool calling, parallel calls, ask_* delegation, fallback
+src/lib/agent/tools.ts       every tool, with argument validation
+src/lib/agent/math.ts        trend fit, hours-to-limit, risk pricing, sweep score (deterministic, tested)
+src/lib/agent/scripted.ts    no-key policy that calls the same tools
+src/lib/agent/prompts.ts     system prompts
+src/lib/agent/orchestrate.ts starts a run and finishes it
+src/lib/approvals.ts         approve = execute side effect; claim-first so a double click can't send twice
+src/lib/sweep.ts             nightly portfolio scoring, auto-starts the crew
+src/lib/supabase/memory.ts   in-memory Supabase stand-in used when no keys are set
+src/components/run/*         crew graph, timeline, risk card, step log
+supabase/migrations/005_opscrew.sql   approvals, vendors, parts, memory, sweeps + demo seed
 ```
 
-**Adding a tool:** add a spec to `toolSpecs` and a function with the same name to `tools` in
-`src/lib/agent/tools.ts`, and mention it in the system prompt in `run.ts`. Validate every argument;
-they come from the model.
+API: `POST /api/incidents {scenario_id}`, `GET /api/runs[/id]`, `GET /api/approvals`, `POST /api/approvals/:id {decision, edits?}`,
+`POST /api/sweep`, `GET /api/sweep/cron` (Vercel Cron, `CRON_SECRET`), `GET /api/portfolio`, `GET|POST /api/memory`, `POST /api/reset`, `GET /api/status`.
 
-**Adding data:** asset ids are equipment tags, so any table with an `equipment`/`asset_id` text
-column joins to the graph. If CBRE posts datasets, load them into new tables and read them in `inspect_asset`.
+`npm test` runs the graph and math unit tests. `npm run typecheck` checks types.
 
-## API
-
-- `GET /api/health`: env + DB check
-- `GET /api/dashboard`: properties, tickets, energy, incidents
-- `POST /api/simulate`: `{ asset_id, source: sensor|bms|cyber|ticket|weather, metric, value?, message }`
-- `GET /api/agent/runs/:id`: run status + steps
+**If you deploy publicly:** `/api/incidents` and `/api/sweep` spend NVIDIA credits and anyone can call them.
+That's fine for judging; take it down afterwards.

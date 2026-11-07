@@ -1,141 +1,94 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { SimulatePanel } from "./SimulatePanel";
+import { useEffect, useState } from "react";
+import RunView from "@/components/run/RunView";
+import Stepper from "@/components/story/Stepper";
+import Icon from "@/components/ui/Icon";
+import { api, usePoll } from "@/lib/client";
+import { SCENARIOS } from "@/lib/scenarios";
+import type { Run } from "@/lib/types";
+import { storyOf } from "@/lib/view";
+import s from "./console.module.css";
 
-type Dashboard = {
-  properties: { id: string; name: string; address: string; building_type: string }[];
-  tickets: {
-    id: string; building: string; floor: string; equipment: string; title: string;
-    notes: string; urgency: number; risk_score: number; predicted_impact: string;
-    status: string; reported_at: string;
-  }[];
-  energy: {
-    id: string; zone: string; equipment: string; usage_kwh: number;
-    baseline_kwh: number; anomaly_score: number;
-  }[];
-  incidents: {
-    id: string; title: string; category: string; severity: string; probability: number;
-    affected_zones: string[]; response_plan: string[]; status: string;
-  }[];
-};
-
-const demoDashboard: Dashboard = {
-  properties: [],
-  tickets: [],
-  energy: [],
-  incidents: [],
-};
+const INTRO = storyOf(undefined, [], []).stages;
 
 export default function Home() {
-  const [dashboard, setDashboard] = useState<Dashboard>(demoDashboard);
-  const [activeView, setActiveView] = useState<"overview" | "tickets" | "energy" | "response" | "simulate">("simulate");
-  const [error, setError] = useState("");
+  const runs = usePoll<{ runs: (Run & { pending: number })[] }>("/api/runs", 4000);
+  const status = usePoll<{ mode: string; reset_enabled: boolean }>("/api/status", 60_000);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [other, setOther] = useState(SCENARIOS[1].id);
+  const [busy, setBusy] = useState("");
+  const [note, setNote] = useState("");
 
-  useEffect(() => {
-    fetch("/api/dashboard")
-      .then(async (response) => {
-        const result = (await response.json()) as Dashboard & { error?: string };
-        if (!response.ok) throw new Error(result.error || "Could not load dashboard.");
-        setDashboard(result);
-      })
-      .catch((reason: Error) => setError(reason.message));
-  }, []);
+  // Follow the newest run unless the user just started one.
+  const latest = runs.data?.runs[0]?.id ?? null;
+  useEffect(() => { if (!runId && latest) setRunId(latest); }, [latest, runId]);
+  const running = Boolean(runs.data?.runs.some((r) => r.status === "running"));
 
-  const criticalTickets = useMemo(
-    () => dashboard.tickets.filter((ticket) => ticket.risk_score >= 70).length,
-    [dashboard.tickets],
-  );
-  const abnormalEnergy = useMemo(
-    () => dashboard.energy.filter((reading) => reading.anomaly_score >= 60).length,
-    [dashboard.energy],
-  );
+  async function inject(id: string) {
+    setBusy(id); setNote("");
+    try {
+      const r = await api<{ run_id: string }>("/api/incidents", { method: "POST", json: { scenario_id: id } });
+      setRunId(r.run_id);
+      void runs.refresh();
+    } catch (e) { setNote(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(""); }
+  }
+  async function sweep() {
+    setBusy("sweep"); setNote("");
+    try {
+      const r = await api<{ run_id: string | null; scores: { name: string; score: number }[] }>("/api/sweep", { method: "POST", json: {} });
+      const top = r.scores[0];
+      setNote(r.run_id ? `The sweep scored every building and flagged ${top.name} (${top.score}/100), so the agents started on their own.` : `Sweep done. Highest risk: ${top?.name ?? "none"} (${top?.score ?? 0}/100), below the bar.`);
+      if (r.run_id) setRunId(r.run_id);
+      void runs.refresh();
+    } catch (e) { setNote(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(""); }
+  }
+  async function reset() {
+    if (!confirm("Clear all runs and approvals? The demo buildings stay.")) return;
+    setBusy("reset");
+    try { await api("/api/reset", { method: "POST" }); setRunId(null); void runs.refresh(); }
+    catch (e) { setNote(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(""); }
+  }
 
+  const demo = SCENARIOS[0];
   return (
-    <main>
-      <header className="hero">
-        <div>
-          <p className="eyebrow">Zero Day · CBRE × NVIDIA</p>
-          <h1>Property risk, before it spreads.</h1>
-          <p className="intro">
-            A commercial property intelligence cockpit that connects maintenance
-            signals, energy anomalies, and catastrophe response into one action plan.
-          </p>
+    <>
+      <header className={`${s.hero} rise`}>
+        <span className={s.kicker}>HackUTD 2026 · CBRE · NVIDIA Nemotron · NMC²</span>
+        <h1>Catch building failures before they happen.</h1>
+        <p>
+          OpsCrew is a team of AI agents for property and data center managers. It connects the data that usually lives in separate
+          systems (maintenance tickets, sensor readings, leases and the weather), predicts what is about to break, shows what waiting
+          would cost, and drafts the fix. <b>You approve it with one click.</b>
+        </p>
+        <div className={s.actions}>
+          <button type="button" className={`btn accent ${s.big}`} disabled={!!busy || running} onClick={() => { void inject(demo.id); }}>
+            <Icon name="play" size={15} />{busy === demo.id ? "Starting…" : running ? "Agents are working…" : "Run the demo incident"}
+          </button>
+          <span className={s.demoNote}>{demo.blurb} at Avon DC1</span>
+          <span className={s.spacer} />
+          <div className={s.more}>
+            <select className="input" value={other} onChange={(e) => setOther(e.target.value)} aria-label="Other scenarios">
+              {SCENARIOS.slice(1).map((sc) => <option key={sc.id} value={sc.id}>{sc.label}</option>)}
+            </select>
+            <button type="button" className="btn sm" disabled={!!busy || running} onClick={() => { void inject(other); }}>Run</button>
+          </div>
+          <button type="button" className="btn sm" disabled={!!busy || running} onClick={() => { void sweep(); }}><Icon name="radar" size={13} />{busy === "sweep" ? "Sweeping…" : "Nightly sweep"}</button>
+          {status.data?.reset_enabled && runId && <button type="button" className="btn sm ghost" disabled={!!busy} onClick={() => { void reset(); }}><Icon name="reset" size={13} />Reset</button>}
         </div>
-        <div className="hero-mark">NVIDIA<br /><span>Nemotron</span></div>
+        {note && <p className={s.note} role="status">{note}</p>}
       </header>
 
-      <nav className="tabs" aria-label="Dashboard views">
-        {([
-          ["simulate", "Simulate"], ["overview", "Overview"], ["tickets", "Maintenance"], ["energy", "Energy"], ["response", "Response"]
-        ] as const).map(([key, label]) => (
-          <button className={activeView === key ? "active" : ""} key={key} onClick={() => setActiveView(key)}>
-            {label}
-          </button>
-        ))}
-      </nav>
-
-      {error && <div className="error">Dashboard unavailable: {error}<br />Run the Supabase migrations and configure .env.local.</div>}
-
-      {activeView === "overview" && (
+      {runId ? <RunView key={runId} runId={runId} /> : (
         <>
-          <section className="metric-grid">
-            <Metric label="Properties monitored" value={dashboard.properties.length} detail="Portfolio coverage" />
-            <Metric label="Escalation risks" value={criticalTickets} detail="Tickets scoring 70+" tone="warning" />
-            <Metric label="Energy anomalies" value={abnormalEnergy} detail="Readings above threshold" tone="orange" />
-            <Metric label="Predicted incidents" value={dashboard.incidents.length} detail="Nemotron-prioritized" tone="purple" />
-          </section>
-          <section className="split">
-            <Panel title="Escalation radar" kicker="CBRE · Predict before it spreads">
-              {dashboard.tickets.slice(0, 3).map((ticket) => <RiskRow key={ticket.id} ticket={ticket} />)}
-              {!dashboard.tickets.length && <EmptyState />}
-            </Panel>
-            <Panel title="Nemotron action brief" kicker="NVIDIA · Beyond a chatbot">
-              <div className="brief">
-                <span className="signal">● LIVE ANALYSIS</span>
-                <h3>Small signals are converging on the east wing.</h3>
-                <p>Two Floor 4 tickets share AHU-04 and a 65-minute window. The model recommends dispatching a technician before water damage reaches Floor 5.</p>
-                <button className="primary" onClick={() => setActiveView("response")}>Open response plan →</button>
-              </div>
-            </Panel>
-          </section>
+          <h2 className={s.h2}>How it works</h2>
+          <Stepper stages={INTRO} live={false} />
+          {runs.error && <p className="c-err">{runs.error}</p>}
         </>
       )}
-
-      {activeView === "simulate" && <SimulatePanel />}
-      {activeView === "tickets" && <TicketView tickets={dashboard.tickets} />}
-      {activeView === "energy" && <EnergyView energy={dashboard.energy} />}
-      {activeView === "response" && <ResponseView incidents={dashboard.incidents} />}
-
-      <footer>Built for <strong>CBRE: Predict Before It Spreads</strong> + <strong>NVIDIA: Use Nemotron Beyond a Chatbot</strong></footer>
-    </main>
+    </>
   );
-}
-
-function Metric({ label, value, detail, tone = "" }: { label: string; value: number; detail: string; tone?: string }) {
-  return <div className={`metric ${tone}`}><p>{label}</p><strong>{value}</strong><span>{detail}</span></div>;
-}
-
-function Panel({ title, kicker, children }: { title: string; kicker: string; children: React.ReactNode }) {
-  return <section className="panel"><p className="kicker">{kicker}</p><h2>{title}</h2>{children}</section>;
-}
-
-function RiskRow({ ticket }: { ticket: Dashboard["tickets"][number] }) {
-  return <article className="risk-row"><div><span className={`badge ${ticket.risk_score >= 70 ? "high" : "medium"}`}>{ticket.risk_score >= 70 ? "HIGH RISK" : "MONITOR"}</span><h3>{ticket.title}</h3><p>{ticket.building} · {ticket.floor} · {ticket.equipment}</p></div><strong>{ticket.risk_score}<small>/100</small></strong></article>;
-}
-
-function TicketView({ tickets }: { tickets: Dashboard["tickets"] }) {
-  return <Panel title="Maintenance escalation queue" kicker="Connected by building · floor · equipment · time"><div className="table">{tickets.map((ticket) => <div className="table-row" key={ticket.id}><div><span className="badge high">{ticket.risk_score} RISK</span><h3>{ticket.title}</h3><p>{ticket.notes}</p></div><div><b>{ticket.equipment}</b><span>{ticket.predicted_impact}</span></div></div>)}</div>{!tickets.length && <EmptyState />}</Panel>;
-}
-
-function EnergyView({ energy }: { energy: Dashboard["energy"] }) {
-  return <Panel title="Energy waste investigator" kicker="Compare usage against peer baselines"><div className="energy-grid">{energy.map((reading) => { const delta = Math.round(((reading.usage_kwh - reading.baseline_kwh) / reading.baseline_kwh) * 100); return <article className="energy-card" key={reading.id}><div className="energy-head"><span>{reading.zone}</span><b className={reading.anomaly_score >= 60 ? "orange-text" : ""}>{delta > 0 ? "+" : ""}{delta}%</b></div><h3>{reading.equipment}</h3><div className="bar"><i style={{ width: `${Math.min(reading.anomaly_score, 100)}%` }} /></div><p>{reading.usage_kwh} kWh actual · {reading.baseline_kwh} kWh baseline</p><span className="muted">{reading.anomaly_score >= 60 ? "Investigation recommended" : "Within expected range"}</span></article>; })}</div>{!energy.length && <EmptyState />}</Panel>;
-}
-
-function ResponseView({ incidents }: { incidents: Dashboard["incidents"] }) {
-  return <Panel title="Catastrophe response center" kicker="Prioritized by probability × impact"><div className="response-list">{incidents.map((incident) => <article className="response-card" key={incident.id}><div className="response-title"><span className={`badge ${incident.severity === "high" ? "high" : "medium"}`}>{incident.severity.toUpperCase()}</span><strong>{incident.probability}% likely</strong></div><h3>{incident.title}</h3><p>{incident.category} · Affected: {incident.affected_zones.join(", ")}</p><ol>{incident.response_plan.map((step) => <li key={step}>{step}</li>)}</ol></article>)}</div>{!incidents.length && <EmptyState />}</Panel>;
-}
-
-function EmptyState() {
-  return <p className="empty">No data yet. Apply the Supabase migrations to load the demo scenario.</p>;
 }
