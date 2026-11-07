@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SimulatePanel } from "./SimulatePanel";
 
 type Dashboard = {
   properties: { id: string; name: string; address: string; building_type: string }[];
@@ -28,7 +29,7 @@ const demoDashboard: Dashboard = {
 
 export default function Home() {
   const [dashboard, setDashboard] = useState<Dashboard>(demoDashboard);
-  const [activeView, setActiveView] = useState<"overview" | "tickets" | "energy" | "response">("overview");
+  const [activeView, setActiveView] = useState<"overview" | "tickets" | "energy" | "response" | "simulate">("simulate");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function Home() {
 
       <nav className="tabs" aria-label="Dashboard views">
         {([
-          ["overview", "Overview"], ["tickets", "Maintenance"], ["energy", "Energy"], ["response", "Response"]
+          ["simulate", "Simulate"], ["overview", "Overview"], ["tickets", "Maintenance"], ["energy", "Energy"], ["response", "Response"]
         ] as const).map(([key, label]) => (
           <button className={activeView === key ? "active" : ""} key={key} onClick={() => setActiveView(key)}>
             {label}
@@ -101,6 +102,7 @@ export default function Home() {
         </>
       )}
 
+      {activeView === "simulate" && <SimulatePanel />}
       {activeView === "tickets" && <TicketView tickets={dashboard.tickets} />}
       {activeView === "energy" && <EnergyView energy={dashboard.energy} />}
       {activeView === "response" && <ResponseView incidents={dashboard.incidents} />}
