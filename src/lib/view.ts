@@ -25,6 +25,7 @@ export function summarize(step: Step): string {
     case "detect_trend": return r.hours_to_limit == null ? "no crossing" : `limit in ${Math.round(r.hours_to_limit)} h`;
     case "tenants_at_risk": return `${r.tenants?.length ?? 0} tenants · ${money(r.penalty_per_hour_usd)}/hr`;
     case "get_weather": return r.summary?.max_f != null ? `high ${Math.round(r.summary.max_f)}°F` : "forecast";
+    case "get_weather_alerts": return r.count ? `${r.count} NWS alert(s)` : "no alerts";
     case "get_energy": return r.readings?.[0] ? `${r.readings[0].equipment} +${r.readings[0].over_baseline_pct}%` : "no anomaly";
     case "past_incidents": return r.repeat ? `${r.work_orders.length} past repair(s)` : "no past repairs";
     case "price_risk": return `${money(r.wait_usd)} vs ${money(r.fix_usd)}`;

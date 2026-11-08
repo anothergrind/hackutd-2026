@@ -18,6 +18,7 @@ export type Facts = {
   tenants?: { id: string; name: string; asset_id: string; sla_penalty_per_hour: number; exposure_usd: number }[];
   penaltyPerHour?: number;
   weather?: { max_f: number | null; rain_pct: number | null; gust_mph: number | null };
+  alerts?: string[];
   payer?: { party: "tenant" | "landlord"; name: string; ref: string; text: string };
   vendors?: { id: string; name: string; est_cost_usd: number; next_available: string }[];
   parts?: { part: string; on_hand: number; unit_cost: number; lead_days: number }[];
@@ -281,6 +282,39 @@ export const leaseTools: Record<string, Tool> = {
       return { property: p.name, current: data.current, daily: data.daily, summary: ctx.facts.weather };
     },
   },
+  get_weather_alerts: {
+    spec: fn(
+      "get_weather_alerts",
+      "Active National Weather Service watches, warnings and advisories at the asset's property (heat advisories, severe storms, floods).",
+      assetProp,
+      ["asset_id"],
+    ),
+    async run(args, ctx) {
+      const { properties: p } = await getAsset(ctx.db, str(args, "asset_id", 50));
+      if (p.lat == null || p.lon == null) return { error: "Property has no coordinates" };
+
+      // NWS is free and needs no key, but it only covers the US and rejects requests without a User-Agent.
+      const url = `https://api.weather.gov/alerts/active?point=${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+      const response = await fetch(url, {
+        headers: { "User-Agent": "OpsCrew (HackUTD demo)", Accept: "application/geo+json" },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!response.ok) throw new Error(`NWS alerts ${response.status}`);
+
+      // Each GeoJSON feature is one alert; keep the first 5 and only the fields the agent needs.
+      const data = await response.json();
+      const features: { properties: Record<string, string | null> }[] = data.features ?? [];
+      const alerts = features.slice(0, 5).map(({ properties: a }) => ({
+        event: a.event,
+        severity: a.severity,
+        headline: a.headline,
+        ends: a.ends ?? a.expires,
+      }));
+
+      ctx.facts.alerts = alerts.map((a) => String(a.event));
+      return { property: p.name, count: alerts.length, alerts };
+    },
+  },
 };
 
 // ---------------- Dispatch ----------------
@@ -347,7 +381,13 @@ export const dispatchTools: Record<string, Tool> = {
       tenant_id: { type: "string", description: "Tenant id from tenants_at_risk" }, subject: { type: "string" }, message: { type: "string" }, protects_usd: { type: "number" },
     }, ["tenant_id", "subject", "message"]),
     async run(args, ctx) {
-      const rows = must(await ctx.db.from("tenants").select("id, name, contact_email, sla_penalty_per_hour").eq("id", str(args, "tenant_id", 60)).limit(1)) as { id: string; name: string; contact_email: string; sla_penalty_per_hour: number }[];
+      const id = str(args, "tenant_id", 60);
+      // Least privilege: only tenants this run found at risk, so a confused or manipulated model can't write to anyone else.
+      const atRisk = ctx.facts.tenants ?? [];
+      if (!atRisk.some((t) => t.id === id)) {
+        throw new Error(`tenant_id must be a tenant at risk in this run: ${atRisk.map((t) => t.id).join(", ") || "none found yet (run tenants_at_risk first)"}.`);
+      }
+      const rows = must(await ctx.db.from("tenants").select("id, name, contact_email, sla_penalty_per_hour").eq("id", id).limit(1)) as { id: string; name: string; contact_email: string; sla_penalty_per_hour: number }[];
       if (!rows.length) throw new Error("Unknown tenant_id. Use an id from tenants_at_risk.");
       const t = rows[0];
       return draft(ctx, {

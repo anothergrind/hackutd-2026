@@ -40,6 +40,14 @@ function toolsFor(cfg: AgentConfig, ctx: RunCtx, mode: "live" | "scripted"): Rec
   return tools;
 }
 
+/** Dispatch has no tenant lookup of its own, so hand it the at-risk tenants this run already found (notices need their ids). */
+function tenantsAtRisk(ctx: RunCtx) {
+  const tenants = ctx.facts.tenants ?? [];
+  if (!tenants.length) return "";
+  const lines = tenants.map((t) => `- ${t.id}: ${t.name}, exposure $${Math.round(t.exposure_usd).toLocaleString("en-US")}`);
+  return `\n\nTenants at risk (from tenants_at_risk); draft one notice for each:\n${lines.join("\n")}`;
+}
+
 function systemPrompt(cfg: AgentConfig, ctx: RunCtx) {
   if (cfg.kind !== "lead") return `${cfg.instructions}\n\n${RULES}`;
   // Run order comes from the connections drawn on the Agents canvas.
