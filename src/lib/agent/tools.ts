@@ -379,7 +379,13 @@ export const dispatchTools: Record<string, Tool> = {
       tenant_id: { type: "string", description: "Tenant id from tenants_at_risk" }, subject: { type: "string" }, message: { type: "string" }, protects_usd: { type: "number" },
     }, ["tenant_id", "subject", "message"]),
     async run(args, ctx) {
-      const rows = must(await ctx.db.from("tenants").select("id, name, contact_email, sla_penalty_per_hour").eq("id", str(args, "tenant_id", 60)).limit(1)) as { id: string; name: string; contact_email: string; sla_penalty_per_hour: number }[];
+      const id = str(args, "tenant_id", 60);
+      // Least privilege: only tenants this run found at risk, so a confused or manipulated model can't write to anyone else.
+      const atRisk = ctx.facts.tenants ?? [];
+      if (!atRisk.some((t) => t.id === id)) {
+        throw new Error(`tenant_id must be a tenant at risk in this run: ${atRisk.map((t) => t.id).join(", ") || "none found yet (run tenants_at_risk first)"}.`);
+      }
+      const rows = must(await ctx.db.from("tenants").select("id, name, contact_email, sla_penalty_per_hour").eq("id", id).limit(1)) as { id: string; name: string; contact_email: string; sla_penalty_per_hour: number }[];
       if (!rows.length) throw new Error("Unknown tenant_id. Use an id from tenants_at_risk.");
       const t = rows[0];
       return draft(ctx, {

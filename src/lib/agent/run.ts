@@ -26,11 +26,20 @@ function toolsFor(cfg: AgentConfig, ctx: RunCtx, mode: "live" | "scripted"): Rec
       spec: { type: "function", function: { name: `ask_${sub.id}`, description: `${sub.name}: ${sub.role}. Tools: ${sub.tools.join(", ")}.`, parameters: { type: "object", properties: { task: { type: "string", description: "What you need, one or two sentences" } }, required: ["task"] } } },
       async run(args) {
         const task = typeof args.task === "string" && args.task.trim() ? args.task.trim().slice(0, 800) : "Investigate the signal.";
-        return { report: await runAgent(sub.id, task, ctx, mode) };
+        const extra = sub.kind === "dispatch" ? tenantsAtRisk(ctx) : "";
+        return { report: await runAgent(sub.id, task + extra, ctx, mode) };
       },
     };
   }
   return tools;
+}
+
+/** Dispatch has no tenant lookup of its own, so hand it the at-risk tenants this run already found (notices need their ids). */
+function tenantsAtRisk(ctx: RunCtx) {
+  const tenants = ctx.facts.tenants ?? [];
+  if (!tenants.length) return "";
+  const lines = tenants.map((t) => `- ${t.id}: ${t.name}, exposure $${Math.round(t.exposure_usd).toLocaleString("en-US")}`);
+  return `\n\nTenants at risk (from tenants_at_risk); draft one notice for each:\n${lines.join("\n")}`;
 }
 
 function systemPrompt(cfg: AgentConfig, ctx: RunCtx) {
