@@ -1,5 +1,7 @@
 # Canary — HackUTD 2026 (CBRE × NVIDIA × NMC²)
 
+**Live on Vercel: [hackutd-2026-liard.vercel.app](https://hackutd-2026-liard.vercel.app)**. It's password-protected, so ask the team for the login.
+
 Five Nemotron agents that catch a building failure early, price it, and fix it after a manager approves.
 A **Lead agent** reads building memory, sends **Ticket Triage**, **Sensor Watch** and **Lease / SLA** off in
 parallel, prices the cost of waiting vs fixing now, and has **Dispatch** draft the work order, schedule change and
@@ -27,6 +29,16 @@ flow in the terminal and prints every step.
 
 If Nemotron errors mid-run, that agent falls back to the scripted policy (same tools, same data) unless it has
 already drafted something. Set `OPSCREW_MODE=scripted` to force the fallback on stage.
+
+## Deployment
+
+Production runs on Vercel at https://hackutd-2026-liard.vercel.app (project `hackutd-2026`).
+
+- **Deploy:** `npx vercel login` once, then `npx vercel deploy --prod`. Pushes to GitHub don't deploy on their own yet.
+- **Environment:** the Supabase keys, `NVIDIA_API_KEY`, `SITE_USER`/`SITE_PASSWORD`, `CRON_SECRET` and `ALLOW_DEMO_RESET`, set with `npx vercel env add <NAME> production`.
+  `NVIDIA_BASE_URL` is left unset, so production uses NVIDIA's hosted Nemotron. The Brev GPU is only reachable through a laptop's tunnel.
+- **Cron:** Vercel Cron calls `/api/sweep/cron` daily at 07:00 UTC (`vercel.json`) with `CRON_SECRET`.
+- **Shared data:** production and local dev share one Supabase project, so runs, approvals and **Reset demo** affect both.
 
 ## Pages
 
