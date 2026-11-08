@@ -1,4 +1,0 @@
-.note { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 12px; padding: 12px 20px; }
-.note p { color: var(--ink); font-size: 15px; }
-.form { display: grid; gap: 12px; padding: 16px 20px 20px; }
-.form button { justify-self: start; }

@@ -7,12 +7,9 @@ import { usePoll } from "@/lib/client";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Live Incident", icon: "activity" },
-  { href: "/plan", label: "Tonight's Plan", icon: "calendar" },
   { href: "/approvals", label: "Approvals", icon: "inbox" },
   { href: "/portfolio", label: "Buildings", icon: "building" },
-  { href: "/runs", label: "History", icon: "history" },
-  { href: "/memory", label: "Memory", icon: "brain" },
-  { href: "/crew", label: "The Agents", icon: "users" },
+  { href: "/crew", label: "Agents", icon: "users" },
 ];
 
 function toggleTheme() {
@@ -32,7 +29,7 @@ export default function Rail() {
 
   return (
     <nav className="rail" aria-label="Primary">
-      <Link href="/" className="rail-brand">
+      <Link href="/overview" className="rail-brand" aria-label="OpsCrew overview">
         <span className="mark">OC</span>
         <span className="rail-name"><b>OpsCrew</b><em>Building operations</em></span>
       </Link>

@@ -2,6 +2,7 @@
 // It exists so the demo never depends on rate limits or Wi-Fi. Live Nemotron uses prompts.ts instead.
 
 import type { AgentConfig } from "@/lib/crew";
+import { stagesOf } from "@/lib/flow";
 import type { RunCtx } from "./tools";
 
 export type Call = { name: string; args: Record<string, unknown> };
@@ -27,6 +28,7 @@ function defaultArgs(tool: string, ctx: RunCtx): Record<string, unknown> | null 
     case "detect_trend": return h.trend ? { ...h.trend } : null;
     case "get_energy": return {};
     case "tenants_at_risk": return { asset_id: h.price_asset, outage_hours: h.outage_hours };
+    case "lease_responsibility": return { asset_id: h.price_asset };
     default: return null; // writes and linking need real reasoning
   }
 }
@@ -121,23 +123,36 @@ export function scriptedMove(cfg: AgentConfig, turn: number, ctx: RunCtx, availa
       return { final: `Drafted ${f.drafts} action${f.drafts === 1 ? "" : "s"} for approval: vendor ${f.vendors?.[0]?.name ?? "n/a"}.${(f.parts ?? []).some((p) => p.on_hand > 0) ? " Spare parts are on site." : ""}` };
     }
     case "lead": {
+      // Turn 0 reads memory, then one turn per stage drawn on the Agents canvas, then price, dispatch, save.
+      const stages = stagesOf(ctx.crew);
+      const S = stages.length;
       if (turn === 0) return { thought: `New signal on ${ctx.signal.asset_id}. Checking what we already know about this building.`, calls: [{ name: "read_building_memory", args: {} }] };
-      if (turn === 1) {
-        const checkers = ctx.crew.filter((a) => a.kind === "specialist" && a.enabled);
+      if (turn >= 1 && turn <= S) {
+        const group = stages[turn - 1];
+        const ask = (a: AgentConfig) => ({ name: `ask_${a.id}`, args: { task: BUILTIN_TASK[a.id]?.(ctx) ?? `${a.role.replace(/[.?!]+$/, "")}. The signal is on ${ctx.signal.asset_id}; the likely root is ${h.root}.` } });
+        const before = turn > 1 ? `, after stage ${turn - 1} reported back` : "";
         return {
-          thought: `Running ${checkers.length} check${checkers.length === 1 ? "" : "s"} at the same time.`,
-          calls: checkers.map((a) => ({ name: `ask_${a.id}`, args: { task: BUILTIN_TASK[a.id]?.(ctx) ?? `${a.role.replace(/[.?!]+$/, "")}. The signal is on ${ctx.signal.asset_id}; the likely root is ${h.root}.` } })),
+          thought: group.length > 1 ? `Stage ${turn}${before}: running ${group.map((a) => a.name).join(", ")} at the same time.` : `Stage ${turn}${before}: asking ${group[0].name}.`,
+          calls: group.map(ask),
         };
       }
-      if (turn === 2) {
+      if (turn === S + 1) {
         const repair = f.vendors?.[0]?.est_cost_usd ?? 350 + 165 * h.repair_hours;
         return { thought: "Pricing the cost of waiting against fixing now.", calls: [{ name: "price_risk", args: { asset_id: h.price_asset, outage_hours: h.outage_hours, hours_until_failure: f.trend?.hours_to_limit ?? null, repair_cost_usd: repair } }] };
       }
-      if (turn === 3) {
-        if (!available.includes("ask_dispatch")) return { calls: [] };
-        return { thought: "Worth fixing now. Handing the fix to Dispatch.", calls: [{ name: "ask_dispatch", args: { task: `Fix ${h.root} before it fails. Protects ${usd(f.risk?.wait_usd ?? 0)}. Draft the work order, any schedule change, and notices for affected tenants.` } }] };
+      if (turn === S + 2) {
+        const disp = available.find((n) => n.startsWith("ask_") && ctx.crew.find((a) => `ask_${a.id}` === n)?.kind === "dispatch");
+        if (!disp) return { calls: [] };
+        // The Lead's decision rule from the Agents page: repair only when delay costs enough, or failure is close.
+        const rules = cfg.rules ?? { min_ratio: 1, urgent_hours: 24 };
+        const r = f.risk;
+        const urgent = r?.hours_until_failure != null && r.hours_until_failure <= rules.urgent_hours;
+        if (r && !urgent && r.wait_usd < rules.min_ratio * r.fix_usd) {
+          return { thought: `Delay costs ${usd(r.wait_usd)}, under ${rules.min_ratio}× the ${usd(r.fix_usd)} repair, and failure is not within ${rules.urgent_hours} h. Not preparing a repair; reporting a brief.`, calls: [] };
+        }
+        return { thought: "Worth fixing now. Handing the fix to Dispatch.", calls: [{ name: disp, args: { task: `Fix ${h.root} before it fails. Protects ${usd(f.risk?.wait_usd ?? 0)}. Draft the work order, any schedule change, and notices for affected tenants.` } }] };
       }
-      if (turn === 4) {
+      if (turn === S + 3) {
         return { calls: [{ name: "save_memory", args: { asset_id: h.root, note: `${new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}: ${h.problem}. Caught ${hrs(f.risk?.hours_until_failure)} before the limit; fix drafted for approval.` } }] };
       }
       const r = f.risk;

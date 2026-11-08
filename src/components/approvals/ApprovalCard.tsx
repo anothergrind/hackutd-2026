@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { api, ago, usd, when } from "@/lib/client";
+import { assetName, plainText } from "@/lib/plain";
 import type { Approval } from "@/lib/types";
 import s from "./ApprovalCard.module.css";
 
@@ -14,9 +15,10 @@ const KIND = {
 } as const;
 
 type P = Record<string, unknown>;
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const str = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v));
 
-export default function ApprovalCard({ a, onDone, context }: { a: Approval & { agent_runs?: { title: string | null; properties?: { name: string } | null } | null }; onDone?: () => void; context?: boolean }) {
+export default function ApprovalCard({ a, onDone, context, inline }: { a: Approval & { agent_runs?: { title: string | null; properties?: { name: string } | null } | null }; onDone?: () => void; context?: boolean; inline?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -49,11 +51,10 @@ export default function ApprovalCard({ a, onDone, context }: { a: Approval & { a
   const pending = a.status === "pending";
 
   return (
-    <article className={`${s.card} ${pending ? s.pending : ""}`}>
-      <header className={s.head}>
-        <span className={s.ico}><Icon name={k.icon} size={16} /></span>
+    <article className={`${s.card} ${pending ? s.pending : ""} ${inline ? s.inline : ""}`}>
+      {!inline && <header className={s.head}>
         <div className={s.title}>
-          <span className={s.kind}>{k.label}{context && a.agent_runs ? <> · <Link className="link" href={`/runs/${a.run_id}`}>{a.agent_runs.properties?.name ?? a.agent_runs.title}</Link></> : null}</span>
+          <span className={s.kind}>{k.label}{context && a.agent_runs ? <> · <Link className="link" href={`/?run=${a.run_id}`}>{a.agent_runs.properties?.name ?? a.agent_runs.title}</Link></> : null}</span>
           <b title={a.title}>{a.title}</b>
           {(a.protects_usd > 0 || a.cost_usd > 0) && (
             <span className={s.money}>
@@ -62,8 +63,8 @@ export default function ApprovalCard({ a, onDone, context }: { a: Approval & { a
             </span>
           )}
         </div>
-        {!pending && <span className={`tag ${a.status === "sent" ? "ok" : "err"}`}>{a.status.toUpperCase()}</span>}
-      </header>
+        {!pending && <span className={`tag ${a.status === "sent" ? "ok" : "err"}`}>{a.status === "sent" ? "Sent" : "Rejected"}</span>}
+      </header>}
 
       <div className={s.body}>
         {a.kind === "work_order" && (editing ? (
@@ -76,8 +77,14 @@ export default function ApprovalCard({ a, onDone, context }: { a: Approval & { a
           </div>
         ) : (
           <>
-            <p className={s.meta}><span className="mono">{str(p.asset_id)}</span> · {str(p.vendor_name)} · {when(str(p.scheduled_for))} · P{str(p.priority)} · {str(p.est_hours)} h</p>
-            <ol className={s.steps}>{((p.steps as string[]) ?? []).map((x) => <li key={x}>{x}</li>)}</ol>
+            <dl className={s.kv}>
+              <dt>Vendor</dt><dd>{str(p.vendor_name)}</dd>
+              <dt>Equipment</dt><dd>{cap(assetName(str(p.asset_id)).replace(/^the /, ""))}</dd>
+              <dt>Scheduled</dt><dd>{when(str(p.scheduled_for))}</dd>
+              <dt>Priority</dt><dd>P{str(p.priority)}{p.est_hours ? ` · about ${str(p.est_hours)} hours of work` : ""}</dd>
+            </dl>
+            <span className={s.sub}>Repair Steps</span>
+            <ol className={s.steps}>{((p.steps as string[]) ?? []).map((x) => <li key={x}>{plainText(x)}</li>)}</ol>
           </>
         ))}
         {a.kind === "tenant_notice" && (editing ? (
@@ -87,9 +94,11 @@ export default function ApprovalCard({ a, onDone, context }: { a: Approval & { a
           </div>
         ) : (
           <>
-            <p className={s.meta}>To {str(p.tenant_name)} · <span className="mono">{str(p.to)}</span></p>
-            <p className={s.subject}>{str(p.subject)}</p>
-            <p className={s.message}>{str(p.message)}</p>
+            <dl className={s.kv}>
+              <dt>To</dt><dd>{str(p.tenant_name)} <span className={s.dim}>{str(p.to)}</span></dd>
+              <dt>Subject</dt><dd>{plainText(str(p.subject))}</dd>
+            </dl>
+            <p className={s.message}>{plainText(str(p.message))}</p>
           </>
         ))}
         {a.kind === "schedule_change" && (editing ? (
@@ -98,17 +107,21 @@ export default function ApprovalCard({ a, onDone, context }: { a: Approval & { a
             <label className={s.narrow}><span className="label">Hours</span><input className="input" type="number" min={1} max={168} value={str(draft.hours)} onChange={set("hours")} /></label>
           </div>
         ) : (
-          <p className={s.meta}><span className="mono">{str(p.asset_id)}</span> · {str(p.change)} · for {str(p.hours)} h</p>
+          <dl className={s.kv}>
+            <dt>Change</dt><dd>{cap(plainText(str(p.change)))}</dd>
+            <dt>Equipment</dt><dd>{cap(assetName(str(p.asset_id)).replace(/^the /, ""))}</dd>
+            <dt>Duration</dt><dd>{str(p.hours)} hours</dd>
+          </dl>
         ))}
       </div>
 
       <footer className={s.foot}>
         {pending ? (
           <>
-            <button type="button" className="btn sm accent" disabled={busy} onClick={() => { void decide("approve"); }}><Icon name="check" size={14} />{editing ? "Save and approve" : "Approve"}</button>
-            <button type="button" className="btn sm" disabled={busy} onClick={() => setEditing((v) => !v)}><Icon name="pencil" size={13} />{editing ? "Cancel edit" : "Edit"}</button>
+            <button type="button" className="btn sm accent" disabled={busy} onClick={() => { void decide("approve"); }}><Icon name="check" size={14} />{editing ? "Save and Approve" : "Approve"}</button>
+            <button type="button" className="btn sm" disabled={busy} onClick={() => setEditing((v) => !v)}><Icon name="pencil" size={13} />{editing ? "Cancel Edit" : "Edit"}</button>
             <button type="button" className="btn sm ghost" disabled={busy} onClick={() => { void decide("reject"); }}>Reject</button>
-            <span className={s.when}>drafted {ago(a.created_at)}</span>
+            <span className={s.when}>Drafted {ago(a.created_at)}</span>
           </>
         ) : (
           <span className={s.when}>{a.status === "sent" ? "Sent" : "Rejected"} by {a.decided_by} · {ago(a.decided_at)}</span>

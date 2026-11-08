@@ -76,3 +76,14 @@ export async function decide(db: SupabaseClient, id: string, d: Decision) {
   }
   return { id, status: d.decision === "approve" ? "sent" : "rejected" };
 }
+
+/** Undo a rejection: the action goes back to pending, and a closed run reopens for approval. */
+export async function reopen(db: SupabaseClient, id: string) {
+  const { data: claimed } = await db.from("approvals")
+    .update({ status: "pending", decided_by: null, decision_note: null, decided_at: null })
+    .eq("id", id).eq("status", "rejected").select("run_id");
+  const runId = (claimed?.[0] as { run_id?: string } | undefined)?.run_id;
+  if (!runId) throw new Error("Only a rejected action can be restored");
+  await db.from("agent_runs").update({ status: "awaiting_approval", finished_at: null }).eq("id", runId).eq("status", "done");
+  return { id, status: "pending" };
+}

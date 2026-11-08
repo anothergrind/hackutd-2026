@@ -37,7 +37,7 @@ export default function AgentDrawer({ m, v, t0, onClose }: { m: CrewMember; v?: 
         {v?.task && <section className={s.sec}><span className="label">Task from the lead</span><p className={s.task}>{v.task.split("\n")[0]}</p></section>}
 
         <section className={s.sec}>
-          <span className="label">What it did</span>
+          <span className="label">Actions Taken</span>
           {!v?.steps.length && <p className="muted">Has not started in this run.</p>}
           <ol className={s.steps}>
             {v?.steps.filter((x) => x.kind !== "start").map((x) => (

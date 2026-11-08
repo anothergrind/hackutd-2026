@@ -24,9 +24,6 @@
 .rail-mode b { font-size: 14px; font-weight: 500; color: #fff; }
 .rail-mode em { display: none; }
 
-/* Page titles */
-.console-head h1 { font: 600 32px/1.15 var(--serif); letter-spacing: -.01em; color: var(--ink); }
-.console-head p { color: var(--ink-2); }
 
 @media (max-width: 1100px) {
   .rail { gap: 12px; padding: 0 16px; }
