@@ -47,7 +47,7 @@ export default function BuildingNotes({ propertyId, notes, assets, onSaved }: { 
           {shown.map((m) => (
             <li key={m.id}>
               <p>{plainText(m.note)}</p>
-              <span>{SOURCE[m.source]}{m.asset_id ? ` · ${assetLabel(m.asset_id)}` : ""} · {ago(m.created_at)}{m.run_id ? <> · <a className="link" href={`/?run=${m.run_id}`}>View incident</a></> : null}</span>
+              <span>{SOURCE[m.source]}{m.asset_id ? `, ${assetLabel(m.asset_id)}` : ""}, {ago(m.created_at)}{m.run_id ? <>{"   "}<a className="link" href={`/?run=${m.run_id}`}>View incident</a></> : null}</span>
             </li>
           ))}
         </ul>

@@ -183,7 +183,7 @@ function sensorMove(turn: number, ctx: RunCtx): Move {
   if (!t) return { final: `No trend history for this asset; treating the signal as acute. ${feeds}` };
 
   return {
-    final: `${t.asset_id} ${t.metric} is rising ${t.slope_per_day}/day (r² ${t.r2}). ` +
+    final: `${t.asset_id} ${t.metric} is ${t.slope_per_day < 0 ? "falling" : "rising"} ${Math.abs(t.slope_per_day)}/day (r² ${t.r2}). ` +
       `At ${t.latest} now, it crosses the ${t.limit} limit in ${hrs(t.hours_to_limit)}. ${feeds}`,
   };
 }

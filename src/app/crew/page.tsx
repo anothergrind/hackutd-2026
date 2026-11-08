@@ -151,8 +151,8 @@ export default function Agents() {
   const sub = (n: FNode) => {
     if (n.kind !== "agent") return undefined;
     const a = n.agent!;
-    if (loose.has(a.id)) return "Not connected · switched off";
-    if (a.kind === "specialist") { const st = stageOf(a.id); const together = stages[st - 1]?.length > 1; return `Stage ${st}${together ? " · runs in parallel" : ""}`; }
+    if (loose.has(a.id)) return "Not connected, switched off";
+    if (a.kind === "specialist") { const st = stageOf(a.id); const together = stages[st - 1]?.length > 1; return `Stage ${st}${together ? ", runs in parallel" : ""}`; }
     return a.role;
   };
   const state = (n: FNode): NodeState => (n.kind === "agent" && loose.has(n.id) ? "off" : "idle");
@@ -250,7 +250,7 @@ export default function Agents() {
                 <ol className={s.order}>
                   <li><b>Lead agent</b><span>Reads the building history</span></li>
                   {stages.map((g, i) => (
-                    <li key={i}><b>{g.map((a) => a.name).join(" + ")}</b><span>Stage {i + 1}{g.length > 1 ? " · at the same time" : ""}</span></li>
+                    <li key={i}><b>{g.map((a) => a.name).join(" + ")}</b><span>Stage {i + 1}{g.length > 1 ? ", at the same time" : ""}</span></li>
                   ))}
                   <li><b>Lead decides</b><span>Prices the cost of delay against the repair</span></li>
                   {agents.find((a) => a.kind === "dispatch")?.enabled !== false ? <li><b>Dispatch</b><span>Prepares the repair for approval</span></li> : <li><b>Brief only</b><span>Dispatch is not connected</span></li>}

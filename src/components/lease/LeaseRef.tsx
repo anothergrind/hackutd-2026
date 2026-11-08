@@ -25,7 +25,7 @@ function LeasePanel({ leaseRef, clause, onClose }: { leaseRef: string; clause?: 
     <SidePanel eyebrow="Lease Agreement" label={leaseRef} onClose={onClose}>
       <header className={s.head}>
         <h2>{t?.name ?? leaseRef}</h2>
-        <p>Lease {leaseRef}{lease?.property ? ` · ${lease.property.name}` : ""}</p>
+        <p>Lease {leaseRef}{lease?.property ? ` at ${lease.property.name}` : ""}</p>
         {used && (
           <p className={s.verdict}>
             <i data-party={used.party} />

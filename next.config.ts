@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Keep the dev badge away from the sidebar's bottom controls.
-  devIndicators: { position: "bottom-right" },
+  devIndicators: false,
   // Basic hardening: no framing by other sites (clickjacking on the approve button), no MIME sniffing,
   // and no full URLs leaked to other origins.
   async headers() {

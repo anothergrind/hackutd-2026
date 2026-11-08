@@ -1,5 +1,5 @@
 import type { AgentConfig } from "@/lib/crew";
-import { stagesOf } from "@/lib/flow";
+import { levels, stagesOf } from "@/lib/flow";
 import { agentMode, chat, type Message, type ToolCall } from "@/lib/nemotron";
 import { TOOL_LIBRARY, type AgentId } from "@/lib/roster";
 import { RULES } from "./prompts";
@@ -85,9 +85,33 @@ export async function runAgent(agent: AgentId, task: string, ctx: RunCtx, mode: 
 
   if (mode === "live") {
     const messages: Message[] = [{ role: "system", content: systemPrompt(cfg, ctx) }, { role: "user", content: task }];
+    let filledIn = false;
+    let pendingNote = "";
     try {
       for (let turn = 0; turn < cfg.max_turns; turn++) {
         const reply = await chat(messages, Object.values(tools).map((t) => t.spec), cfg.model);
+        // Every specialist connected on the Agents canvas runs. If the Lead is about to wrap up or hand off to
+        // Dispatch without asking some of them, ask them now (in canvas order) and give the Lead their findings.
+        if (cfg.kind === "lead" && !filledIn) {
+          const dispatchTool = ctx.crew.find((a) => a.kind === "dispatch") ? `ask_${ctx.crew.find((a) => a.kind === "dispatch")!.id}` : "";
+          const finishing = !reply.tool_calls?.length || reply.tool_calls.some((c) => c.function.name === dispatchTool);
+          const lv = levels(ctx.crew);
+          const missing = ctx.crew.filter((a) => a.kind === "specialist" && a.enabled !== false && (lv.get(a.id) ?? 0) > 0 && !ctx.reports?.[a.id]);
+          if (finishing && missing.length) {
+            filledIn = true;
+            const brief = task.slice(0, 600);
+            for (const l of [...new Set(missing.map((a) => lv.get(a.id)!))].sort((a, b) => a - b)) {
+              await Promise.all(missing.filter((a) => lv.get(a.id) === l).map((a) =>
+                execute(agent, { name: `ask_${a.id}`, args: { task: `Check this incident from your side and report what matters:\n${brief}` } }, tools, ctx)));
+            }
+            const found = missing.map((a) => `- ${a.name}: ${ctx.reports?.[a.id] ?? "no report"}`).join("\n");
+            // Wrapping up: give the Lead the new findings and let it decide again (it can still call Dispatch).
+            // Handing off to Dispatch: let that call go ahead; the new findings follow its result.
+            const note = `These connected specialists have also reported:\n${found}\n\nTake their findings into account. ${dispatchTool ? `If the decision rule says to fix it and you have not yet, call ${dispatchTool} now.` : ""}`;
+            if (!reply.tool_calls?.length) { messages.push({ role: "user", content: note }); continue; }
+            pendingNote = note;
+          }
+        }
         messages.push(reply);
         if (!reply.tool_calls?.length) {
           const text = reply.content?.trim() || "Done.";
@@ -103,6 +127,7 @@ export async function runAgent(agent: AgentId, task: string, ctx: RunCtx, mode: 
         if (calls.some((c) => WRITE_TOOLS.has(c.name) || c.name === "ask_dispatch")) wroteSomething = true;
         const results = await Promise.all(calls.map((c) => execute(agent, c, tools, ctx)));
         calls.forEach((c, i) => messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(results[i]).slice(0, 6000) }));
+        if (pendingNote) { messages.push({ role: "user", content: pendingNote }); pendingNote = ""; }
       }
       const text = "Stopped after the turn limit; see the steps above.";
       await ctx.log(agent, "final", { text });

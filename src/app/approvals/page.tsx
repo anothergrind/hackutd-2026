@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ApprovalCard from "@/components/approvals/ApprovalCard";
 import PageHeader from "@/components/shell/PageHeader";
 import Icon from "@/components/ui/Icon";
@@ -46,6 +46,8 @@ export default function Approvals() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("risk");
   const [openId, setOpenId] = useState<string | null>(null);
+  // /approvals?run=<id> opens that incident (used by the Buildings page).
+  useEffect(() => { const id = new URLSearchParams(location.search).get("run"); if (id) setOpenId(id); }, []);
 
   const all = useMemo(() => runs.data?.runs ?? [], [runs.data]);
   const buildings = [...new Set(all.map((r) => r.properties?.name).filter(Boolean))] as string[];
@@ -106,7 +108,7 @@ export default function Approvals() {
             </select>
           </div>
         </div>
-        <p className={s.showing}>Showing {shown.length} of {counts.all} incidents · {counts.needs} pending approval{counts.working ? ` · ${counts.working} still being analyzed` : ""}</p>
+        <p className={s.showing}>Showing {shown.length} of {counts.all} incidents, {counts.needs} pending approval{counts.working ? `, ${counts.working} still being analyzed` : ""}</p>
 
         {shown.length ? (
           <table className={s.table}>

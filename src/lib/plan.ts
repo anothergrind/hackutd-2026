@@ -86,7 +86,7 @@ async function explain(items: PlanItem[], summary: ReturnType<typeof choose>["su
   if (agentMode() !== "live") return fallback();
   try {
     const reply = await chat([
-      { role: "system", content: "You are the OpsCrew portfolio planner. Explain tonight's repair plan to a facility director in 3 short sentences of plain English. Use only the numbers given. No lists." },
+      { role: "system", content: "You are the Canary portfolio planner. Explain tonight's repair plan to a facility director in 3 short sentences of plain English. Use only the numbers given. No lists." },
       { role: "user", content: JSON.stringify({ summary, items: items.map(({ building, decision, reason, wait_usd, fix_usd, payer }) => ({ building, decision, reason, wait_usd, fix_usd, payer })) }) },
     ], []);
     return reply.content?.trim() || fallback();

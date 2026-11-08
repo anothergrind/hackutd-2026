@@ -70,7 +70,7 @@ export default function CrewGraph({ run, crew, agents, approvals, risk, onSelect
       </ol>
       <p className={s.nowLine}>
         <b>Step {now + 1}: {STEP_TITLES[now]}</b>
-        {" · "}{steps[now] === "running" && working.length ? `${working.join(", ")} working now` : steps[now] === "waiting" ? "waiting for your approval" : steps[now] === "running" ? "working now" : "done"}
+        {", "}{steps[now] === "running" && working.length ? `${working.join(", ")} working now` : steps[now] === "waiting" ? "waiting for your approval" : steps[now] === "running" ? "working now" : "done"}
       </p>
       <FlowCanvas
         className={s.stage}

@@ -20,18 +20,38 @@ export const agentMode = (): "live" | "scripted" =>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const HOSTED_URL = "https://integrate.api.nvidia.com/v1";
+const HOSTED_MODEL = "nvidia/nemotron-3.5-super-vl-120b-a12b";
+// When a self-hosted NIM (e.g. the Brev GPU through a tunnel) can't be reached, use NVIDIA's hosted
+// Nemotron instead of dropping to scripted mode, and skip the self-hosted one for a minute.
+const g = globalThis as unknown as { __nimDownUntil?: number };
+
 export async function chat(messages: Message[], tools: ToolSpec[], model?: string) {
+  const selfHosted = BASE_URL !== HOSTED_URL;
+  if (selfHosted && Date.now() >= (g.__nimDownUntil ?? 0)) {
+    try {
+      return await chatAt(BASE_URL, model || nemotronModel(), messages, tools);
+    } catch (e) {
+      // Only a connection failure switches over; a real model error is reported as is.
+      if (!(e instanceof TypeError) && !/fetch failed|ECONNREFUSED|timeout|aborted/i.test(String(e))) throw e;
+      g.__nimDownUntil = Date.now() + 60_000;
+      console.warn("[nemotron] self-hosted NIM unreachable, using hosted Nemotron for now");
+    }
+  }
+  return chatAt(HOSTED_URL, selfHosted ? HOSTED_MODEL : model || nemotronModel(), messages, tools);
+}
+
+async function chatAt(base: string, id: string, messages: Message[], tools: ToolSpec[]) {
   const key = process.env.NVIDIA_API_KEY;
   if (!key) throw new Error("Missing NVIDIA_API_KEY.");
 
   // Nemotron Nano reasons out loud by default, which slows it down and pushes tool calls aside.
   // "/no_think" in the system prompt switches that off.
-  const id = model || nemotronModel();
   if (/nano/i.test(id)) messages = messages.map((m, i) => (i === 0 && m.role === "system" && !m.content.startsWith("/no_think") ? { ...m, content: `/no_think\n${m.content}` } : m));
 
   let lastError = "";
   for (let attempt = 0; attempt < 3; attempt++) {
-    const response = await fetch(`${BASE_URL}/chat/completions`, {
+    const response = await fetch(`${base}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(60_000),
@@ -48,4 +68,18 @@ export async function chat(messages: Message[], tools: ToolSpec[], model?: strin
     await sleep(800 * 2 ** attempt);
   }
   throw new Error(lastError);
+}
+
+/** Can the configured Nemotron server be reached right now? Also says whether the hosted backup answers. */
+export async function modelHealth(): Promise<{ selfHosted: boolean; primary: boolean; hosted: boolean | null }> {
+  const key = process.env.NVIDIA_API_KEY;
+  const ping = async (base: string, auth: boolean) => {
+    try {
+      const r = await fetch(`${base}/models`, { headers: auth && key ? { Authorization: `Bearer ${key}` } : {}, signal: AbortSignal.timeout(4000), cache: "no-store" });
+      return r.ok;
+    } catch { return false; }
+  };
+  const selfHosted = BASE_URL !== HOSTED_URL;
+  const primary = await ping(BASE_URL, !selfHosted);
+  return { selfHosted, primary, hosted: selfHosted && !primary ? await ping(HOSTED_URL, true) : null };
 }

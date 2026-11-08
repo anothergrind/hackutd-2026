@@ -54,7 +54,7 @@ export default function ApprovalCard({ a, onDone, context, inline }: { a: Approv
     <article className={`${s.card} ${pending ? s.pending : ""} ${inline ? s.inline : ""}`}>
       {!inline && <header className={s.head}>
         <div className={s.title}>
-          <span className={s.kind}>{k.label}{context && a.agent_runs ? <> · <Link className="link" href={`/?run=${a.run_id}`}>{a.agent_runs.properties?.name ?? a.agent_runs.title}</Link></> : null}</span>
+          <span className={s.kind}>{k.label}{context && a.agent_runs ? <> for <Link className="link" href={`/?run=${a.run_id}`}>{a.agent_runs.properties?.name ?? a.agent_runs.title}</Link></> : null}</span>
           <b title={a.title}>{a.title}</b>
           {(a.protects_usd > 0 || a.cost_usd > 0) && (
             <span className={s.money}>
@@ -81,10 +81,10 @@ export default function ApprovalCard({ a, onDone, context, inline }: { a: Approv
               <dt>Vendor</dt><dd>{str(p.vendor_name)}</dd>
               <dt>Equipment</dt><dd>{cap(assetName(str(p.asset_id)).replace(/^the /, ""))}</dd>
               <dt>Scheduled</dt><dd>{when(str(p.scheduled_for))}</dd>
-              <dt>Priority</dt><dd>P{str(p.priority)}{p.est_hours ? ` · about ${str(p.est_hours)} hours of work` : ""}</dd>
+              <dt>Priority</dt><dd>P{str(p.priority)}{p.est_hours ? `, about ${str(p.est_hours)} hours of work` : ""}</dd>
             </dl>
             <span className={s.sub}>Repair Steps</span>
-            <ol className={s.steps}>{((p.steps as string[]) ?? []).map((x) => <li key={x}>{plainText(x)}</li>)}</ol>
+            <ol className={s.steps}>{((p.steps as string[]) ?? []).map((x) => <li key={x}>{plainText(x.replace(/^\s*\d+[.)]\s*/, ""))}</li>)}</ol>
           </>
         ))}
         {a.kind === "tenant_notice" && (editing ? (
@@ -124,7 +124,7 @@ export default function ApprovalCard({ a, onDone, context, inline }: { a: Approv
             <span className={s.when}>Drafted {ago(a.created_at)}</span>
           </>
         ) : (
-          <span className={s.when}>{a.status === "sent" ? "Sent" : "Rejected"} by {a.decided_by} · {ago(a.decided_at)}</span>
+          <span className={s.when}>{a.status === "sent" ? "Sent" : "Rejected"} by {a.decided_by}, {ago(a.decided_at)}</span>
         )}
         {err && <span className="c-err" role="alert">{err}</span>}
       </footer>

@@ -6,7 +6,8 @@ import { scenarioByLabel, type Scenario } from "@/lib/scenarios";
 
 const DC1 = "00000000-0000-0000-0000-000000000003", CENTER = "00000000-0000-0000-0000-000000000001", NORTHSTAR = "00000000-0000-0000-0000-000000000002";
 
-export type Site = { code: string; from: string; id: string; name: string; address: string; building_type: string; lat: number; lon: number };
+/** `quiet` buildings start healthy (no open tickets or energy anomalies) and never get demo incidents. */
+export type Site = { code: string; from: string; id: string; name: string; address: string; building_type: string; lat: number; lon: number; quiet?: boolean };
 
 export const SITES: Site[] = [
   { code: "PLN", from: DC1, id: "00000000-0000-0000-0000-000000000013", name: "Plano DC2", address: "6100 Legacy Drive, Plano, TX", building_type: "Data center", lat: 33.0776, lon: -96.8236 },
@@ -16,6 +17,14 @@ export const SITES: Site[] = [
   { code: "UPT", from: CENTER, id: "00000000-0000-0000-0000-000000000021", name: "Uptown Plaza", address: "2500 McKinney Ave, Dallas, TX", building_type: "Mixed-use", lat: 32.7979, lon: -96.8031 },
   { code: "GAL", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000012", name: "Galleria Office Park", address: "13355 Noel Road, Dallas, TX", building_type: "Office", lat: 32.9306, lon: -96.8199 },
   { code: "FRS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000022", name: "Frisco Commons", address: "3000 Internet Blvd, Frisco, TX", building_type: "Office", lat: 33.1023, lon: -96.8285 },
+  { code: "HOU", from: DC1, id: "00000000-0000-0000-0000-000000000043", name: "Houston DC5", address: "5150 Westway Park Blvd, Houston, TX", building_type: "Data center", lat: 29.8435, lon: -95.5566 },
+  { code: "RCS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000032", name: "Richardson Square", address: "1201 E Campbell Road, Richardson, TX", building_type: "Office", lat: 32.9773, lon: -96.7064 },
+  { code: "SUG", from: CENTER, id: "00000000-0000-0000-0000-000000000031", name: "Sugar Land Plaza", address: "2245 Texas Drive, Sugar Land, TX", building_type: "Mixed-use", lat: 29.5966, lon: -95.6216 },
+  { code: "SAT", from: DC1, id: "00000000-0000-0000-0000-000000000053", name: "San Antonio DC6", address: "5455 Rogers Road, San Antonio, TX", building_type: "Data center", lat: 29.4952, lon: -98.6886, quiet: true },
+  { code: "FTW", from: DC1, id: "00000000-0000-0000-0000-000000000063", name: "Fort Worth DC7", address: "4800 Alliance Gateway, Fort Worth, TX", building_type: "Data center", lat: 32.9726, lon: -97.3097, quiet: true },
+  { code: "DOM", from: CENTER, id: "00000000-0000-0000-0000-000000000041", name: "Domain Tower", address: "11601 Alterra Parkway, Austin, TX", building_type: "Mixed-use", lat: 30.4021, lon: -97.7254, quiet: true },
+  { code: "LCC", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000042", name: "Las Colinas Center", address: "5221 N O'Connor Blvd, Irving, TX", building_type: "Office", lat: 32.8807, lon: -96.9481, quiet: true },
+  { code: "ADP", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000052", name: "Addison Point", address: "15455 Dallas Parkway, Addison, TX", building_type: "Office", lat: 32.9562, lon: -96.8227, quiet: true },
 ];
 
 /** Original building names, replaced in copied notes and tickets. */
@@ -26,7 +35,7 @@ const CODE_RE = new RegExp(`^(?:${SITES.map((s) => s.code).join("|")})-`);
 export const baseAsset = (id: string) => id.replace(CODE_RE, "");
 export const siteByProperty = (propertyId: string | null | undefined) => SITES.find((s) => s.id === propertyId);
 /** The buildings a scenario can happen in: its original one and every copy of it (null = the original). */
-export const sitesFor = (propertyId: string) => [null, ...SITES.filter((s) => s.from === propertyId)];
+export const sitesFor = (propertyId: string) => [null, ...SITES.filter((s) => s.from === propertyId && !s.quiet)];
 
 /** Replaces equipment tags (and the building name) in any JSON-able value with the copy's. */
 export function remap<T>(value: T, site: Site, assetIds: string[]): T {

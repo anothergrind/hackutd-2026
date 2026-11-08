@@ -8,7 +8,7 @@ import "./shell.css";
 const franklin = Libre_Franklin({ variable: "--font-sans", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: "OpsCrew",
+  title: "Canary",
   description: "Nemotron agents that catch building failures early, price them, and fix them after a manager approves.",
 };
 

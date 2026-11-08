@@ -1,4 +1,4 @@
-# OpsCrew — HackUTD 2026 (CBRE × NVIDIA × NMC²)
+# Canary — HackUTD 2026 (CBRE × NVIDIA × NMC²)
 
 Five Nemotron agents that catch a building failure early, price it, and fix it after a manager approves.
 A **Lead agent** reads building memory, sends **Ticket Triage**, **Sensor Watch** and **Lease / SLA** off in

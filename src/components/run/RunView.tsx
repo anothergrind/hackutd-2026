@@ -106,7 +106,6 @@ export default function RunView({ runId }: { runId: string }) {
           <span className={s.meta}>
                       </span>
         </div>
-        <p className={s.howto}>{tab === "steps" ? "What the AI did, in order. Click any step to open its details." : tab === "map" ? "How the AI agents passed work between each other. Click an agent for details." : `Every step the AI took, with exact timing. ${run.mode === "live" ? "Powered by NVIDIA Nemotron." : "Demo mode."} Started ${ago(run.created_at)}.`}</p>
         {tab === "steps" && <Pipeline run={run} steps={steps} approvals={approvals} crew={story.crew} agents={story.agents} onAgent={setAgent} refresh={refresh} focusApproval={review} verification={data.verification} />}
         {tab === "map" && <CrewGraph run={run} crew={story.crew} agents={story.agents} approvals={approvals} risk={risk} onSelect={setAgent} selected={agent} verification={data.verification} />}
         {tab === "log" && (

@@ -12,7 +12,7 @@ import type { Approval, Run, Step } from "@/lib/types";
 import type { AgentView, CrewMember } from "@/lib/view";
 import type { Verification } from "@/lib/verify";
 import VerifyStep from "./VerifyStep";
-import LeaseRef, { PayerSentence } from "@/components/lease/LeaseRef";
+import LeaseRef from "@/components/lease/LeaseRef";
 import s from "./Pipeline.module.css";
 
 import { stepStatuses, type PStatus } from "@/lib/steps";
@@ -120,7 +120,7 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
     const d = nowDoing(agents[a.id], 0);
     const text = plainText(d.text);
     const line = d.verb === "Just did" ? text : d.verb === "Thinking" ? (text ? `Thinking: ${text}` : "Thinking") : `${d.verb} ${text}`;
-    return <span key={a.id} className={s.liveRow}><i style={{ background: a.color }} /><b>{a.name}</b><span className={s.sep}>·</span>{line}</span>;
+    return <span key={a.id} className={s.liveRow}><i style={{ background: a.color }} /><b>{a.name}:</b> {line}</span>;
   });
   const callList = (v?: AgentView) => (v?.tools ?? []).filter((x) => !x.content.name?.startsWith("ask_"));
 
@@ -132,7 +132,7 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
         <p className="muted">Equipment: {assetName(sig?.asset_id).replace(/^the /, "")}</p>
       </Row>
 
-      <Row n={2} live={<span className={s.liveRow}><i /><b>Lead agent</b><span className={s.sep}>·</span>Reading past notes for this building</span>} title="History Review" why="Past repairs at this building reveal repeat failures." st={statuses[1]} open={open.has(1)} onGo={go} onToggle={() => toggle(1)}
+      <Row n={2} live={<span className={s.liveRow}><i /><b>Lead agent:</b> Reading past notes for this building</span>} title="History Review" why="Past repairs at this building reveal repeat failures." st={statuses[1]} open={open.has(1)} onGo={go} onToggle={() => toggle(1)}
         result={memory ? `${memory.r.notes?.length ?? 0} past notes` : null} time={memory ? `${((memory.step.content.ms ?? 0) / 1000).toFixed(1)}s` : ""}>
         {memory?.r.notes?.length ? <ul className={s.notes}>{memory.r.notes.map((nt: R, i: number) => <li key={i}><span>{assetName(nt.asset_id)}</span>{plainText(nt.note)}</li>)}</ul> : <p className="muted">No notes yet.</p>}
       </Row>
@@ -167,8 +167,8 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
         </ul>
       </Row>
 
-      <Row n={4} live={<span className={s.liveRow}><i /><b>Lead agent</b><span className={s.sep}>·</span>Comparing the cost of delay with the repair cost</span>} title="Cost Analysis" why="Compares the cost of delay with the repair cost." st={statuses[3]} open={open.has(3)} onGo={go} onToggle={() => toggle(3)}
-        result={risk ? <><span className="c-err">{money(risk.wait_usd)}</span> delay · <span className="c-ok">{money(risk.fix_usd)}</span> repair</> : null}
+      <Row n={4} live={<span className={s.liveRow}><i /><b>Lead agent:</b> Comparing the cost of delay with the repair cost</span>} title="Cost Analysis" why="Compares the cost of delay with the repair cost." st={statuses[3]} open={open.has(3)} onGo={go} onToggle={() => toggle(3)}
+        result={risk ? <><span className="c-err">{money(risk.wait_usd)}</span> delay vs <span className="c-ok">{money(risk.fix_usd)}</span> repair</> : null}
         time={price ? `${((price.step.content.ms ?? 0) / 1000).toFixed(1)}s` : ""}>
         {risk && (
           <>
@@ -182,7 +182,6 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
                 {payer && <tr><td>Who pays for the repair</td><td><LeaseRef text={payer.ref} /></td><td>{payer.name}</td></tr>}
               </tbody>
             </table>
-            {payer && <p className={s.finding} style={{ padding: "8px 0 0" }}><PayerSentence p={payer} /></p>}
             <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>These numbers come from a fixed formula, not from the AI guessing.</p>
           </>
         )}
@@ -247,7 +246,7 @@ function Approvals({ approvals, refresh }: { approvals: Approval[]; refresh: () 
 
   const label = (a: Approval) => {
     const p = a.payload as R;
-    if (a.kind === "work_order") return { what: `Book ${p.vendor_name} to repair ${assetName(p.asset_id)}`, meta: `${when(p.scheduled_for)} · ${usd(a.cost_usd)}` };
+    if (a.kind === "work_order") return { what: `Book ${p.vendor_name} to repair ${assetName(p.asset_id)}`, meta: `${when(p.scheduled_for)}, ${usd(a.cost_usd)}` };
     if (a.kind === "tenant_notice") return { what: `Email ${p.tenant_name} about the planned maintenance`, meta: `Subject: ${plainText(String(p.subject ?? ""))}` };
     return { what: cap(plainText(String(p.change ?? a.title))), meta: `For ${p.hours} hours` };
   };
@@ -265,7 +264,7 @@ function Approvals({ approvals, refresh }: { approvals: Approval[]; refresh: () 
                 {isPending
                   ? <input type="checkbox" checked={picked.has(a.id)} onChange={() => setPicked((p) => { const n = new Set(p); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); return n; })} aria-label={l.what} />
                   : <span className={`tag ${a.status === "sent" ? "ok" : "err"}`}>{a.status === "sent" ? "Sent" : "Rejected"}</span>}
-                <span className={s.what}><b>{l.what}</b><em>{l.meta}{a.protects_usd > 0 ? ` · avoids up to ${usd(a.protects_usd)}` : ""}</em></span>
+                <span className={s.what}><b>{l.what}</b><em>{l.meta}{a.protects_usd > 0 ? `, avoids up to ${usd(a.protects_usd)}` : ""}</em></span>
                 {isPending && <button type="button" className={`btn sm ${s.editBtn}`} aria-expanded={open} onClick={() => setEdit(open ? null : a.id)}>{open ? "Close" : "Review & Edit"}</button>}
                 {a.status === "rejected" && <button type="button" className={`btn sm ${s.editBtn}`} disabled={busy} onClick={() => { void send([a.id], "restore"); }}>Restore</button>}
               </div>

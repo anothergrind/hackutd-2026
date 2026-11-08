@@ -34,7 +34,7 @@ export default function Timeline({ run, steps, agents, crew }: { run: Run; steps
               )}
               {steps.filter((e) => e.agent === a.id).map((e) => (
                 <i key={e.id} className={`${s.ev} ${tone[e.kind] ?? ""}`} style={{ left: x(Date.parse(e.created_at)) }}
-                  data-tip={`${e.kind}${e.content.name ? " · " + e.content.name : ""}`} />
+                  data-tip={`${e.kind}${e.content.name ? ": " + e.content.name : ""}`} />
               ))}
             </div>
           </div>

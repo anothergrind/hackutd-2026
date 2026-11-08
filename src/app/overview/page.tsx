@@ -17,7 +17,7 @@ const FLOW: { icon: IconName; title: string; text: string }[] = [
   { icon: "badge", title: "Verified", text: "After the repair, the sensors are checked again to confirm the fix." },
 ];
 
-/** The landing view behind the OpsCrew logo: what the product does, live totals, and every building at a glance. */
+/** The landing view behind the Canary logo: what the product does, live totals, and every building at a glance. */
 export default function Overview() {
   const runs = usePoll<Runs>("/api/runs", 6000);
   const port = usePoll<Portfolio>("/api/portfolio", 30_000);
@@ -31,9 +31,9 @@ export default function Overview() {
     <div className={s.page}>
       <section className={s.hero}>
         <div className={s.heroText}>
-          <span className={s.kicker}>Building Operations · Powered by NVIDIA Nemotron</span>
+          <span className={s.kicker}>Powered by NVIDIA Nemotron</span>
           <h1>Catch building failures before they happen.</h1>
-          <p>OpsCrew&apos;s AI agents analyze every incident, price the cost of delay against the repair, and prepare the fix. A facility manager approves with one click.</p>
+          <p>Canary&apos;s AI agents analyze every incident, price the cost of delay against the repair, and prepare the fix. A facility manager approves with one click.</p>
           <div className={s.ctas}>
             <Link href="/" className={`btn ${s.primary}`}><Icon name="play" size={15} />Analyze an Incident</Link>
             <Link href="/approvals" className={`btn ${s.secondary}`}>Review Approvals</Link>

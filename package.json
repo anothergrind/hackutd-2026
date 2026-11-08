@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test \"src/**/*.test.mjs\"",
     "smoke": "node --env-file=.env.local scripts/nemotron-smoke.mjs",
+    "tunnel": "bash scripts/tunnel.sh",
     "dry-run": "tsx scripts/dry-run.ts",
     "dry-run:plan": "tsx scripts/dry-run-plan.ts"
   },

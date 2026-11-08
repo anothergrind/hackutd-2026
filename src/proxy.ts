@@ -32,7 +32,7 @@ export function proxy(request: NextRequest) {
   }
   return new NextResponse("Authentication required", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="OpsCrew", charset="UTF-8"' },
+    headers: { "WWW-Authenticate": 'Basic realm="Canary", charset="UTF-8"' },
   });
 }
 

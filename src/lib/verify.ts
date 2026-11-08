@@ -3,7 +3,7 @@ import { metricLabel } from "@/lib/plain";
 import { scenarioForProperty } from "@/lib/scenarios";
 import { scenarioOfRun } from "@/lib/sites";
 
-// After a repair is approved, OpsCrew checks the sensors again and confirms the problem is gone,
+// After a repair is approved, Canary checks the sensors again and confirms the problem is gone,
 // or reopens it. In the demo there is no real repair, so the after-repair readings are simulated
 // (labelled "After repair (simulated)") and the check runs a short delay after approval.
 

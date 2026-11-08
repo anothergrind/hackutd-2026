@@ -6,7 +6,7 @@ export type NwsAlert = { event: string; severity: string | null; headline: strin
 export async function activeAlerts(lat: number, lon: number, timeoutMs = 6000): Promise<NwsAlert[]> {
   const url = `https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`;
   const response = await fetch(url, {
-    headers: { "User-Agent": "OpsCrew (HackUTD demo)", Accept: "application/geo+json" }, // NWS rejects requests without one
+    headers: { "User-Agent": "Canary (HackUTD demo)", Accept: "application/geo+json" }, // NWS rejects requests without one
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) throw new Error(`NWS alerts ${response.status}`);
