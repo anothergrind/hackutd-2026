@@ -24,3 +24,5 @@
 .cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px 18px; border-top: 1px solid var(--line); }
 .cta :global(.btn) { height: 42px; padding: 0 18px; font-size: 14px; }
 .done { display: flex; align-items: center; gap: 8px; padding: 12px 20px 16px; font-size: 13.5px; color: var(--ok); }
+.bare { display: flex; flex-direction: column; }
+.bare .actions { padding-top: 14px; }

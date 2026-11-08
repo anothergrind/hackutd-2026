@@ -1,14 +1,13 @@
 "use client";
 
-import { ROSTER, type AgentId } from "@/lib/roster";
 import type { Run, Step } from "@/lib/types";
-import type { AgentView } from "@/lib/view";
+import type { AgentView, CrewMember } from "@/lib/view";
 import s from "./Timeline.module.css";
 
 const tone = { start: s.run, thought: "", tool: s.ok, final: s.ok, error: s.err } as const;
 
 /** One lane per agent: how long it ran, with every step as a dot. Parallel work shows as overlapping bars. */
-export default function Timeline({ run, steps, agents }: { run: Run; steps: Step[]; agents: Record<AgentId, AgentView> }) {
+export default function Timeline({ run, steps, agents, crew }: { run: Run; steps: Step[]; agents: Record<string, AgentView>; crew: CrewMember[] }) {
   const t0 = Date.parse(run.created_at);
   const live = run.status === "running";
   const last = steps.length ? Date.parse(steps[steps.length - 1].created_at) : t0;
@@ -22,8 +21,8 @@ export default function Timeline({ run, steps, agents }: { run: Run; steps: Step
 
   return (
     <div className={s.lanes}>
-      {ROSTER.map((a) => {
-        const v = agents[a.id];
+      {crew.map((a) => {
+        const v = agents[a.id] ?? { st: "PENDING", tools: [], steps: [], now: "" };
         const end = v.end ?? now;
         return (
           <div key={a.id} className={s.ln}>

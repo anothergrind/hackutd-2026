@@ -20,7 +20,7 @@ export default function Approvals() {
     <>
       <PageHeader
         title="Approval queue"
-        sub="Every side effect the crew wants to take waits here. Edit the draft if you need to, then approve to send it or reject to drop it."
+        sub="Approve to send. Reject to drop. Nothing goes out without you."
         actions={pending.length > 0 && <span className="chip accent">{pending.length} waiting · protects {usd(protects)}</span>}
       />
       {error && <p className="c-err">{error}</p>}

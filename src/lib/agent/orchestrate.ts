@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AgentConfig } from "@/lib/crew";
+import { crewSnapshot, loadCrew } from "@/lib/crewStore";
 import { agentMode } from "@/lib/nemotron";
 import type { AgentId } from "@/lib/roster";
 import type { Hints } from "@/lib/scenarios";
@@ -19,18 +21,21 @@ export async function startRun(db: SupabaseClient, input: Start) {
   if (error) throw new Error(error.message);
   await db.from("assets").update({ status: "degraded" }).eq("id", input.signal.asset_id);
 
-  const { data: run, error: runError } = await db.from("agent_runs")
-    .insert({ event_id: event.id, trigger: input.trigger, title: input.title, property_id: input.propertyId, mode })
-    .select("id").single();
-  if (runError) throw new Error(runError.message);
+  // The crew is read once per run, so editing agents mid-run does not change a run in flight.
+  const crew = await loadCrew(db);
+  const row = { event_id: event.id, trigger: input.trigger, title: input.title, property_id: input.propertyId, mode };
+  let { data: run, error: runError } = await db.from("agent_runs").insert({ ...row, crew: crewSnapshot(crew) }).select("id").single();
+  if (runError && /crew/.test(runError.message)) ({ data: run, error: runError } = await db.from("agent_runs").insert(row).select("id").single()); // before migration 006
+  if (runError || !run) throw new Error(runError?.message ?? "Could not create run");
 
-  return { runId: run.id as string, execute: () => executeRun(db, run.id, { ...input, signal: event as Signal }, mode) };
+  const runId = run.id as string;
+  return { runId, execute: () => executeRun(db, runId, { ...input, signal: event as Signal }, mode, crew) };
 }
 
-async function executeRun(db: SupabaseClient, runId: string, input: Start, mode: "live" | "scripted") {
+async function executeRun(db: SupabaseClient, runId: string, input: Start, mode: "live" | "scripted", crew: AgentConfig[]) {
   const facts: Facts = { drafts: 0 };
   const ctx: RunCtx = {
-    db, runId, propertyId: input.propertyId, signal: input.signal, hints: input.hints, facts,
+    db, runId, propertyId: input.propertyId, signal: input.signal, hints: input.hints, facts, crew,
     async log(agent: AgentId, kind: string, content: unknown) {
       const { error } = await db.from("agent_steps").insert({ run_id: runId, agent, kind, content });
       if (error) console.error("agent_steps insert failed", error.message);

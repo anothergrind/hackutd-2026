@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AgentConfig } from "@/lib/crew";
 import type { ToolSpec } from "@/lib/nemotron";
 import type { AgentId } from "@/lib/roster";
 import type { Hints } from "@/lib/scenarios";
@@ -21,6 +22,8 @@ export type Facts = {
   parts?: { part: string; on_hand: number; unit_cost: number; lead_days: number }[];
   risk?: ReturnType<typeof priceRisk> & { asset_id: string; outage_hours: number; penalty_per_hour: number };
   drafts: number;
+  /** Tool results per agent, used to write scripted reports for custom specialists. */
+  byAgent?: Record<string, { name: string; result: unknown }[]>;
 };
 
 export type RunCtx = {
@@ -30,6 +33,7 @@ export type RunCtx = {
   signal: Signal;
   hints: Hints;
   facts: Facts;
+  crew: AgentConfig[];
   log: (agent: AgentId, kind: string, content: unknown) => Promise<void>;
 };
 
@@ -327,6 +331,45 @@ export const dispatchTools: Record<string, Tool> = {
   },
 };
 
-export const specialistTools: Record<Exclude<AgentId, "lead">, Record<string, Tool>> = {
-  triage: triageTools, sensor: sensorTools, lease: leaseTools, dispatch: dispatchTools,
+// ---------------- Extra tools for custom specialists ----------------
+
+export const extraTools: Record<string, Tool> = {
+  get_energy: {
+    spec: fn("get_energy", "Energy use vs baseline for an asset (or every meter in this building if omitted), with an anomaly score 0-100.", { asset_id: { type: "string", description: "Optional asset tag" } }),
+    async run(args, ctx) {
+      let q = ctx.db.from("energy_readings").select("equipment, zone, reading_date, usage_kwh, baseline_kwh, anomaly_score").order("anomaly_score", { ascending: false }).limit(12);
+      if (ctx.propertyId) q = q.eq("property_id", ctx.propertyId);
+      const asset = optStr(args, "asset_id", 50);
+      if (asset) q = q.eq("equipment", asset);
+      const rows = must(await q) as { equipment: string; zone: string; usage_kwh: number; baseline_kwh: number; anomaly_score: number }[];
+      return {
+        count: rows.length,
+        readings: rows.map((r) => ({ ...r, over_baseline_pct: Math.round(((Number(r.usage_kwh) - Number(r.baseline_kwh)) / Number(r.baseline_kwh)) * 100) })),
+      };
+    },
+  },
+  past_incidents: {
+    spec: fn("past_incidents", "Earlier work orders and memory notes on an asset and the equipment directly feeding it: is this a repeat failure?", assetProp, ["asset_id"]),
+    async run(args, ctx) {
+      const id = str(args, "asset_id", 50);
+      await getAsset(ctx.db, id);
+      const upstream = [...upstreamOf(await allEdges(ctx.db), id).entries()].filter(([, v]) => v.depth === 1).map(([a]) => a);
+      const ids = [id, ...upstream];
+      const [orders, notes] = await Promise.all([
+        ctx.db.from("work_orders").select("asset_id, title, status, created_at").in("asset_id", ids).order("created_at", { ascending: false }).limit(10),
+        ctx.db.from("building_memory").select("asset_id, note, created_at").in("asset_id", ids).order("created_at", { ascending: false }).limit(10),
+      ]);
+      const wo = (must(orders) as { asset_id: string; title: string; status: string; created_at: string }[]).filter((w) => w.created_at < new Date(Date.now() - 3_600_000).toISOString());
+      const days = (iso: string) => Math.round((Date.now() - Date.parse(iso)) / 86_400_000);
+      return {
+        checked: ids,
+        work_orders: wo.map((w) => ({ ...w, days_ago: days(w.created_at) })),
+        notes: (must(notes) as { asset_id: string; note: string; created_at: string }[]).map((n) => ({ ...n, days_ago: days(n.created_at) })),
+        repeat: wo.length > 0,
+      };
+    },
+  },
 };
+
+/** Every tool by name. ask_* tools are added per run in run.ts. */
+export const ALL_TOOLS: Record<string, Tool> = { ...leadTools, ...triageTools, ...sensorTools, ...leaseTools, ...dispatchTools, ...extraTools };

@@ -68,7 +68,18 @@ const T: Record<string, Row[]> = ((globalThis as unknown as { __opscrewTables?: 
     { id: randomUUID(), property_id: DC1, asset_id: "CRAH-A1", note: "Condensate pump on CRAH-A1 is original equipment (2017). Flagged as end-of-life in the last audit.", source: "seed", run_id: null, created_at: iso(now - 60 * 24 * h) },
     { id: randomUUID(), property_id: AVON, asset_id: "AHU-04", note: "AHU-04 drain pan cracked in 2025 and was patched, not replaced.", source: "seed", run_id: null, created_at: iso(now - 200 * 24 * h) },
   ],
-  agent_runs: [], agent_steps: [], approvals: [], work_orders: [], tenant_notices: [], schedule_changes: [], sweeps: [],
+  energy_readings: [
+    { id: randomUUID(), property_id: AVON, zone: "East wing", equipment: "AHU-04", reading_date: iso(now).slice(0, 10), usage_kwh: 842, baseline_kwh: 590, anomaly_score: 86 },
+    { id: randomUUID(), property_id: AVON, zone: "West wing", equipment: "AHU-02", reading_date: iso(now).slice(0, 10), usage_kwh: 544, baseline_kwh: 520, anomaly_score: 18 },
+    { id: randomUUID(), property_id: NORTH, zone: "Floor 12", equipment: "HVAC-12", reading_date: iso(now).slice(0, 10), usage_kwh: 713, baseline_kwh: 480, anomaly_score: 79 },
+    { id: randomUUID(), property_id: DC1, zone: "Roof", equipment: "CHILLER-1", reading_date: iso(now).slice(0, 10), usage_kwh: 2380, baseline_kwh: 1900, anomaly_score: 72 },
+    { id: randomUUID(), property_id: DC1, zone: "Data hall A", equipment: "CRAH-A1", reading_date: iso(now).slice(0, 10), usage_kwh: 410, baseline_kwh: 395, anomaly_score: 12 },
+  ],
+  work_orders: [
+    { id: randomUUID(), run_id: null, approval_id: null, vendor_id: null, asset_id: "CHILLER-1", priority: 4, title: "Replace CHILLER-1 compressor bearing", steps: ["Replace bearing", "Check refrigerant charge"], status: "done", scheduled_for: null, created_at: iso(now - 28 * 24 * h) },
+  ],
+  agent_configs: [],
+  agent_runs: [], agent_steps: [], approvals: [], tenant_notices: [], schedule_changes: [], sweeps: [],
 });
 const DEFAULTS: Record<string, Row> = {
   agent_runs: { status: "running", trigger: "incident", mode: "live", risk: null, summary: null, finished_at: null },

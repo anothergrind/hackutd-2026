@@ -19,7 +19,7 @@ export const agentMode = (): "live" | "scripted" =>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function chat(messages: Message[], tools: ToolSpec[]) {
+export async function chat(messages: Message[], tools: ToolSpec[], model?: string) {
   const key = process.env.NVIDIA_API_KEY;
   if (!key) throw new Error("Missing NVIDIA_API_KEY.");
 
@@ -29,7 +29,7 @@ export async function chat(messages: Message[], tools: ToolSpec[]) {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(60_000),
-      body: JSON.stringify({ model: nemotronModel(), messages, tools, tool_choice: "auto", temperature: 0.2, max_tokens: 2048 }),
+      body: JSON.stringify({ model: model || nemotronModel(), messages, tools, tool_choice: "auto", temperature: 0.2, max_tokens: 2048 }),
     });
     if (response.ok) {
       const data = (await response.json()) as { choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[] };

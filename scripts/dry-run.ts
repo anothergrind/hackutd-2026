@@ -12,6 +12,13 @@ process.env.OPSCREW_PACE_MS ??= "0";
 const db = memoryDb();
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 async function main() {
+  // Optional: add custom specialists from templates, e.g. CUSTOM=energy,repeat npm run dry-run
+  for (const id of (process.env.CUSTOM ?? "").split(",").filter(Boolean)) {
+    const { TEMPLATES } = await import("@/lib/roster");
+    const tpl = TEMPLATES.find((t) => t.id === id)!;
+    T.agent_configs.push({ id: `${id}_x`, config: { name: tpl.name, role: tpl.role, icon: tpl.icon, color: tpl.color, instructions: tpl.instructions, tools: tpl.tools, enabled: true } });
+  }
+  if (process.env.DISABLE) for (const id of process.env.DISABLE.split(",")) T.agent_configs.push({ id, config: { enabled: false } });
   const scenario = SCENARIOS.find((s) => s.id === (process.argv[2] ?? "cooling-cascade"))!;
   console.log(`\n=== Incident: ${scenario.label} ===`);
   const { runId, execute } = await startRun(db, { signal: scenario.signal, propertyId: scenario.property_id, hints: scenario.hints, trigger: "incident", title: scenario.label });
