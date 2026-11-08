@@ -48,3 +48,5 @@
 
 @media (max-width: 1100px) { .hero { grid-template-columns: minmax(0, 1fr); } .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flow::before, .flow::after { display: none; } }
 @media (max-width: 720px) { .page { margin: -18px -16px 0; } .hero { padding: 40px 20px; } .hero h1 { font-size: 36px; } .section { padding: 0 16px; } .flow { grid-template-columns: minmax(0, 1fr); } }
+.kpis .saved dd { color: var(--mint); }
+.kpis em { display: block; margin-top: 8px; font-style: normal; font-size: 13px; color: #9dbdb2; }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Md from "@/components/ui/Md";
 import ApprovalCard from "@/components/approvals/ApprovalCard";
 import { nowDoing } from "@/components/run/LiveActivity";
 import Icon from "@/components/ui/Icon";
@@ -133,7 +134,7 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
       </Row>
 
       <Row n={2} live={<span className={s.liveRow}><i /><b>Lead agent:</b> Reading past notes for this building</span>} title="History Review" why="Past repairs at this building reveal repeat failures." st={statuses[1]} open={open.has(1)} onGo={go} onToggle={() => toggle(1)}
-        result={memory ? `${memory.r.notes?.length ?? 0} past notes` : null} time={memory ? `${((memory.step.content.ms ?? 0) / 1000).toFixed(1)}s` : ""}>
+        result={memory ? `${memory.r.notes?.length ?? 0} past note${memory.r.notes?.length === 1 ? "" : "s"}` : null} time={memory ? `${((memory.step.content.ms ?? 0) / 1000).toFixed(1)}s` : ""}>
         {memory?.r.notes?.length ? <ul className={s.notes}>{memory.r.notes.map((nt: R, i: number) => <li key={i}><span>{assetName(nt.asset_id)}</span>{plainText(nt.note)}</li>)}</ul> : <p className="muted">No notes yet.</p>}
       </Row>
 
@@ -155,7 +156,7 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
                 </div>
                 {v?.st === "RUNNING"
                   ? <p className={s.now}><em>{nowDoing(v, 0).verb}:</em> {plainText(nowDoing(v, 0).text)}</p>
-                  : <p className={s.finding}>{plainFinding(a.id, v, a.name)}</p>}
+                  : <p className={s.finding}><Md text={plainFinding(a.id, v, a.name)} /></p>}
                 {calls.length > 0 && (
                   <ul className={s.calls}>
                     {calls.map((c) => <li key={c.id}><span>{plainCall(c)}</span></li>)}
@@ -188,7 +189,7 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
       </Row>
 
       <Row n={5} live={dispatch ? liveOf([dispatch]) : null} title="Repair Plan" why="Prepares every action so the facility manager only approves or rejects." st={dispSt} open={open.has(4)} onGo={go} onToggle={() => toggle(4)}
-        result={approvals.length ? `${approvals.length} actions ready` : dispSt === "running" ? "Preparing…" : dispSt === "skipped" ? "Not needed" : null} time={secs(dv?.start, dv?.end)}>
+        result={approvals.length ? `${approvals.length} action${approvals.length === 1 ? "" : "s"} ready` : dispSt === "running" ? "Preparing…" : dispSt === "skipped" ? "Not needed" : null} time={secs(dv?.start, dv?.end)}>
         <ul className={s.calls}>
           {callList(dv).map((c) => <li key={c.id}><span>{plainCall(c)}</span></li>)}
         </ul>
@@ -206,7 +207,7 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
             {sent.map((a) => <li key={a.id}><Icon name="check" size={13} />{doneText(a)}</li>)}
             <li><Icon name="check" size={13} />Saved a building note so a repeat failure is recognized faster</li>
           </ul>
-        ) : <p className="muted">{run.summary ? plainText(run.summary) : "Waiting for the steps above."}</p>}
+        ) : <p className="muted">{run.summary ? <Md text={plainText(run.summary)} /> : "Waiting for the steps above."}</p>}
       </Row>
 
       <Row n={8} title="Verification" why="After the repair, the AI reads the sensors again to confirm the fix." st={statuses[7]} open={open.has(7)} onGo={go} onToggle={() => toggle(7)}
@@ -268,7 +269,8 @@ function Approvals({ approvals, refresh }: { approvals: Approval[]; refresh: () 
                 {isPending && <button type="button" className={`btn sm ${s.editBtn}`} aria-expanded={open} onClick={() => setEdit(open ? null : a.id)}>{open ? "Close" : "Review & Edit"}</button>}
                 {a.status === "rejected" && <button type="button" className={`btn sm ${s.editBtn}`} disabled={busy} onClick={() => { void send([a.id], "restore"); }}>Restore</button>}
               </div>
-              {open && <div className={s.edit}><ApprovalCard a={a} inline onDone={() => { setEdit(null); refresh(); }} /></div>}
+              {/* Always mounted so it can slide open and closed. */}
+              {isPending && <div className={s.edit} aria-hidden={!open}><div className={s.editIn}><ApprovalCard a={a} inline onDone={() => { setEdit(null); refresh(); }} /></div></div>}
             </li>
           );
         })}

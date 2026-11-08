@@ -44,6 +44,7 @@ export const toolInfo = (name: string) => TOOL_LIBRARY.find((t) => t.name === na
 
 export const MODELS: { id: string; label: string }[] = [
   { id: "", label: "Server default (NEMOTRON_MODEL)" },
+  { id: "nvidia/nvidia-nemotron-nano-9b-v2", label: "Nemotron Nano 9B v2 (our Brev GPU)" },
   // All four pass `npm run smoke` (tool calling) on build.nvidia.com as of Nov 2026.
   { id: "nvidia/nemotron-3.5-super-vl-120b-a12b", label: "Nemotron 3.5 Super 120B" },
   { id: "nvidia/nemotron-3-ultra-550b-a55b", label: "Nemotron 3 Ultra 550B" },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Md from "@/components/ui/Md";
 import Icon from "@/components/ui/Icon";
 import { api } from "@/lib/client";
 import { recommendation } from "@/lib/plain";
@@ -41,13 +42,13 @@ export default function Recommendation({ run, approvals, agents, crew, verificat
           {r.ifApproved.length > 0 && (
             <div className="rec-plan">
               <h3>{r.pending ? "Action Plan" : "Actions Taken"}</h3>
-              <ul>{r.ifApproved.map((x) => <li key={x}><Icon name="arrow-right" size={13} />{x}</li>)}</ul>
+              <ul>{r.ifApproved.map((x) => <li key={x}><Icon name="arrow-right" size={13} /><span><Md text={x} /></span></li>)}</ul>
             </div>
           )}
           {r.reasons.length > 0 && (
             <div className="rec-reasons">
               <h3>Reasoning</h3>
-              <ul>{r.reasons.map((x) => <li key={x}><Icon name="check" size={13} />{x}</li>)}</ul>
+              <ul>{r.reasons.map((x) => <li key={x}><Icon name="check" size={13} /><span><Md text={x} /></span></li>)}</ul>
             </div>
           )}
         </div>

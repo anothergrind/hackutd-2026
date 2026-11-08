@@ -6,7 +6,7 @@ import { usd, usePoll } from "@/lib/client";
 import type { Run, SweepScore } from "@/lib/types";
 import s from "./overview.module.css";
 
-type Runs = { runs: (Run & { pending?: number; properties?: { name: string } | null })[] };
+type Runs = { runs: (Run & { pending?: number; repaired?: boolean; properties?: { name: string } | null })[] };
 type Portfolio = { properties: { id: string; name: string; building_type: string }[]; sweep: { scores: SweepScore[] } | null };
 
 const FLOW: { icon: IconName; title: string; text: string }[] = [
@@ -24,6 +24,10 @@ export default function Overview() {
   const list = runs.data?.runs ?? [];
   const pending = list.filter((r) => (r.pending ?? 0) > 0);
   const atRisk = pending.reduce((n, r) => n + (r.risk?.wait_usd ?? 0), 0);
+  // Approved repairs: what waiting would have cost, minus what the repair cost.
+  const fixed = list.filter((r) => r.repaired && r.risk);
+  const saved = fixed.reduce((n, r) => n + Math.max(0, (r.risk!.wait_usd ?? 0) - (r.risk!.fix_usd ?? 0)), 0);
+  const savedIn = new Set(fixed.map((r) => r.property_id)).size;
   const scores = new Map((port.data?.sweep?.scores ?? []).map((x) => [x.property_id, x.score]));
   const buildings = port.data?.properties ?? [];
 
@@ -40,6 +44,7 @@ export default function Overview() {
           </div>
         </div>
         <dl className={s.kpis}>
+          <div className={s.saved}><dt>Saved by Repairing Early</dt><dd>{usd(saved)}</dd><em>{fixed.length ? `${fixed.length} approved repair${fixed.length === 1 ? "" : "s"} across ${savedIn} building${savedIn === 1 ? "" : "s"}` : "Approve a repair to start counting"}</em></div>
           <div><dt>Incidents Analyzed</dt><dd>{list.length}</dd></div>
           <div><dt>Pending Approval</dt><dd>{pending.length}</dd></div>
           <div><dt>Cost of Delay at Stake</dt><dd>{usd(atRisk)}</dd></div>
@@ -68,7 +73,7 @@ export default function Overview() {
             const open = list.filter((r) => r.property_id === b.id && (r.pending ?? 0) > 0).length;
             const tone = score == null ? "" : score >= 60 ? "err" : score >= 35 ? "warn" : "ok";
             return (
-              <Link key={b.id} href="/portfolio" className={s.bldg}>
+              <Link key={b.id} href={`/portfolio?building=${b.id}`} className={s.bldg}>
                 <span className={s.bTop}><b>{b.name}</b><em>{b.building_type}</em></span>
                 <span className={s.meter}><i data-tone={tone} style={{ width: `${score ?? 0}%` }} /></span>
                 <span className={s.bFoot}><span>Risk {score ?? "–"}/100</span><span>{open ? `${open} pending approval` : "No pending incidents"}</span></span>

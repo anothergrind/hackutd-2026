@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Deck from "@/components/present/Deck";
+import AskPanel from "@/components/ask/AskPanel";
 import Logo from "@/components/ui/Logo";
 import Icon, { type IconName } from "@/components/ui/Icon";
 import { usePoll } from "@/lib/client";
@@ -31,6 +32,7 @@ export default function Rail() {
   const h = status?.health;
   const live = Boolean(h?.ok);
   const [presenting, setPresenting] = useState<number | false>(false);
+  const [asking, setAsking] = useState(false);
   // ?present=1-4 opens the deck on that slide.
   useEffect(() => { const n = Number(new URLSearchParams(location.search).get("present")); if (n >= 1 && n <= 4) setPresenting(n - 1); }, []);
 
@@ -59,6 +61,9 @@ export default function Rail() {
             <em>{h?.detail}</em>
           </span>
         </div>
+        <button type="button" className="rail-present" onClick={() => setAsking(true)}>
+          <Icon name="sparkles" size={15} />Ask Canary
+        </button>
         <button type="button" className="rail-present" onClick={() => setPresenting(0)}>
           <Icon name="present" size={15} />Present
         </button>
@@ -67,6 +72,7 @@ export default function Rail() {
           <span className="rail-label">Light / Dark</span>
         </button>
       </div>
+      {asking && <AskPanel onClose={() => setAsking(false)} />}
       {presenting !== false && <Deck start={presenting} onClose={() => setPresenting(false)} />}
     </nav>
   );

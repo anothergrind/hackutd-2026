@@ -220,7 +220,11 @@ export const sensorTools: Record<string, Tool> = {
       ...assetProp, metric: { type: "string", description: "e.g. supply_temp_f" }, limit: { type: "number", description: "The failure or alarm threshold" },
     }, ["asset_id", "metric", "limit"]),
     async run(args, ctx) {
-      const id = str(args, "asset_id", 50), metric = str(args, "metric", 60), limit = num(args, "limit", -1e6, 1e6);
+      const id = str(args, "asset_id", 50), metric = str(args, "metric", 60);
+      // The incident's own safe limit wins when the model analyzes that sensor, so a model can't
+      // swap in a limit it made up (e.g. 45°F instead of the chiller's real 50°F).
+      const known = ctx.hints.trend && ctx.hints.trend.asset_id === id && ctx.hints.trend.metric === metric ? ctx.hints.trend.limit : null;
+      const limit = known ?? num(args, "limit", -1e6, 1e6);
       // The newest sensor history for this metric (last two weeks), oldest first. Its tag is kept so the
       // incident's forecast chart shows exactly the readings that were analyzed.
       const seriesTag = await latestTag(ctx.db, id, metric);

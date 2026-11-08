@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Md from "@/components/ui/Md";
 import { ago, api } from "@/lib/client";
 import { assetLabel, plainText } from "@/lib/plain";
 import s from "./BuildingNotes.module.css";
@@ -46,7 +47,7 @@ export default function BuildingNotes({ propertyId, notes, assets, onSaved }: { 
         <ul className={s.list}>
           {shown.map((m) => (
             <li key={m.id}>
-              <p>{plainText(m.note)}</p>
+              <p><Md text={plainText(m.note)} /></p>
               <span>{SOURCE[m.source]}{m.asset_id ? `, ${assetLabel(m.asset_id)}` : ""}, {ago(m.created_at)}{m.run_id ? <>{"   "}<a className="link" href={`/?run=${m.run_id}`}>View incident</a></> : null}</span>
             </li>
           ))}

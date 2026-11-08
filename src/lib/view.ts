@@ -5,6 +5,7 @@ export type AgentState = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 export type AgentView = { st: AgentState; now: string; start?: number; end?: number; tools: Step[]; steps: Step[]; final?: string; task?: string };
 export type CrewMember = { id: string; name: string; role: string; color: string; icon: IconKey; kind: AgentKind; after?: string[]; x?: number; y?: number; pins?: Record<string, { x: number; y: number }> };
 
+function plural(n: number, word: string) { return `${n} ${word}${n === 1 ? "" : "s"}`; }
 const clip = (s: string, n = 90) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 const money = (n: unknown) => `$${Math.round(Number(n) || 0).toLocaleString("en-US")}`;
 
@@ -17,17 +18,17 @@ export function summarize(step: Step): string {
   const r = (step.content.result ?? {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   if (r.error) return `error: ${clip(String(r.error), 60)}`;
   switch (step.content.name) {
-    case "read_building_memory": return `${r.notes?.length ?? 0} past notes`;
-    case "search_tickets": return `${r.count ?? 0} open tickets`;
+    case "read_building_memory": return `${r.notes?.length ?? 0} past note${r.notes?.length === 1 ? "" : "s"}`;
+    case "search_tickets": return plural(r.count ?? 0, "open ticket");
     case "link_tickets": return `${r.linked?.length ?? 0} linked → ${r.root_asset_id}`;
     case "get_dependencies": return `${r.feeds?.length ?? 0} downstream`;
-    case "get_readings": return `${r.count ?? 0} readings`;
+    case "get_readings": return plural(r.count ?? 0, "reading");
     case "detect_trend": return r.hours_to_limit == null ? "no crossing" : `limit in ${Math.round(r.hours_to_limit)} h`;
-    case "tenants_at_risk": return `${r.tenants?.length ?? 0} tenants, ${money(r.penalty_per_hour_usd)}/hr`;
+    case "tenants_at_risk": return `${plural(r.tenants?.length ?? 0, "tenant")}, ${money(r.penalty_per_hour_usd)}/hr`;
     case "get_weather": return r.summary?.max_f != null ? `high ${Math.round(r.summary.max_f)}°F` : "forecast";
-    case "get_weather_alerts": return r.count ? `${r.count} NWS alert(s)` : "no alerts";
+    case "get_weather_alerts": return r.count ? plural(r.count, "weather alert") : "no alerts";
     case "get_energy": return r.readings?.[0] ? `${r.readings[0].equipment} +${r.readings[0].over_baseline_pct}%` : "no anomaly";
-    case "past_incidents": return r.repeat ? `${r.work_orders.length} past repair(s)` : "no past repairs";
+    case "past_incidents": return r.repeat ? plural(r.work_orders.length, "past repair") : "no past repairs";
     case "price_risk": return `${money(r.wait_usd)} vs ${money(r.fix_usd)}`;
     case "find_vendor": return r.vendors?.[0] ? r.vendors[0].name : "no vendor";
     case "check_parts": return `${(r.parts ?? []).filter((p: { on_hand: number }) => p.on_hand > 0).length} parts on hand`;
@@ -83,7 +84,6 @@ const lastResult = (steps: Step[], name: string): R | undefined => {
 };
 const hrsText = (h: number) => (h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} days`);
 const short$ = (n: number) => (n >= 10_000 ? `$${Math.round(n / 1000)}k` : money(n));
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export function storyOf(run: Run | undefined, steps: Step[], approvals: Approval[], crew = crewOfRun(run)) {
   const agents = deriveAgents(run, steps, crew);

@@ -19,19 +19,19 @@ g:has(.hit:hover) .edge { stroke: var(--ink-3); }
 .m_idle { fill: var(--line-2); } .m_on { fill: var(--accent); } .m_done { fill: var(--ok); } .m_wait { fill: var(--warn); } .m_sel { fill: var(--accent); }
 
 /* Agents */
-.node { position: absolute; display: grid; grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 12px; align-content: center; padding: 0 16px 0 14px; border: 1px solid var(--line-2); border-left: 4px solid var(--c); background: var(--surface); cursor: grab; user-select: none; touch-action: none; transition: border-color .2s, box-shadow .2s, opacity .3s; }
+.node { position: absolute; display: grid; grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 12px; align-content: center; padding: 0 16px 0 14px; border: 1px solid var(--line-2); background: var(--surface); cursor: grab; user-select: none; touch-action: none; transition: border-color .2s, box-shadow .2s, opacity .3s; }
 .node:active { cursor: grabbing; }
 .node b { font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; padding-right: 14px; }
 .sub { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: start; }
-.ico { grid-row: span 2; width: 38px; height: 38px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+.ico { grid-row: span 2; width: 38px; height: 38px; display: grid; place-items: center; color: var(--c); }
 .on { box-shadow: 0 0 0 2px var(--accent); }
-.loose { border-style: dashed; border-left-style: solid; opacity: .7; }
+.loose { border-style: dashed; opacity: .7; }
 .loose .sub { color: var(--warn); }
 
 /* Live state marker in the corner of an agent */
 .state { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; }
 .state i { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--ink-3); }
-.node[data-st="running"] { border-color: var(--accent); border-left-color: var(--c); }
+.node[data-st="running"] { border-color: var(--accent); }
 .node[data-st="running"] .state i { background: var(--accent); animation: blink 1.2s ease-in-out infinite; }
 .node[data-st="done"] .state i { background: var(--ok); }
 .node[data-st="failed"] .state i { background: var(--err); }

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Md from "@/components/ui/Md";
+import { plainText } from "@/lib/plain";
 import { useEffect } from "react";
 import Icon from "@/components/ui/Icon";
 import { summarize, type AgentView, type CrewMember } from "@/lib/view";
@@ -49,7 +51,7 @@ export default function AgentDrawer({ m, v, t0, onClose }: { m: CrewMember; v?: 
                     <pre>{JSON.stringify({ args: x.content.args, result: x.content.result }, null, 2).slice(0, 3000)}</pre>
                   </details>
                 ) : (
-                  <p>{x.content.text}</p>
+                  <p><Md text={plainText(x.content.text ?? "")} /></p>
                 )}
               </li>
             ))}

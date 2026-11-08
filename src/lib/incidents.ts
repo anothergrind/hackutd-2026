@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { startRun } from "@/lib/agent/orchestrate";
 import { SCENARIOS, variedHints, type Scenario } from "@/lib/scenarios";
 import { readSeries, seedSeries } from "@/lib/sensors";
-import { BASE_NAMES, SITES, remap, scenarioAt, sitesFor, type Site } from "@/lib/sites";
+import { BASE_NAMES, ORIGINALS, SITES, remap, scenarioAt, sitesFor, type Site } from "@/lib/sites";
 
 type Row = Record<string, unknown>;
 const g = globalThis as unknown as { __opscrewSites?: Promise<void>; __opscrewSitesN?: number };
@@ -58,6 +58,11 @@ export function ensureSites(db: SupabaseClient) {
     const { data } = await db.from("properties").select("id").in("id", SITES.map((s) => s.id));
     const have = new Set(((data ?? []) as Row[]).map((r) => String(r.id)));
     for (const s of SITES) if (!have.has(s.id)) await cloneSite(db, s);
+    for (const b of [...ORIGINALS, ...SITES]) {
+      const { id, name, address, building_type, lat, lon } = b;
+      await db.from("properties").update({ name, address, building_type, lat, lon }).eq("id", id);
+      await db.from("maintenance_tickets").update({ building: name }).eq("property_id", id);
+    }
   })().catch((e) => { g.__opscrewSites = undefined; throw e; }));
 }
 

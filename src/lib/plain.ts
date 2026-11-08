@@ -35,7 +35,14 @@ export const toolVerb = (name?: string) => (name?.startsWith("ask_") ? "Asked a 
 export const plainCall = (step: Step) => `${toolVerb(step.content.name)} → ${summarize(step)}`;
 
 /** Swap equipment tags for names inside any sentence. */
-export const plainText = (text: string) => text.replace(/\b[A-Z]+(?:-[A-Z0-9]+)+\b/g, (tag) => ASSETS[baseAsset(tag)] ?? tag);
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+/** Swap equipment tags for names inside any sentence, and drop internal ids (database UUIDs) the AI sometimes quotes. */
+export const plainText = (text: string) => text
+  .replace(/\s*\((?:vendor\s+|tenant\s+)?(?:ID|id|Id)\s*[:#]?\s*[0-9a-f-]{36}\)/g, "")
+  .replace(/\s*(?:vendor\s+|tenant\s+)?(?:ID|id)\s*[:#]\s*[0-9a-f-]{36}/g, "")
+  .replace(UUID, "")
+  .replace(/\(\s*\)/g, "")
+  .replace(/\b[A-Z]+(?:-[A-Z0-9]+)+\b/g, (tag) => ASSETS[baseAsset(tag)] ?? tag);
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const hrs = (h: number) => (h < 48 ? `about ${Math.round(h)} hours` : `about ${Math.round(h / 24)} days`);

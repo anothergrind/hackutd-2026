@@ -105,17 +105,21 @@
 .sep { color: var(--ink-3); }
 
 /* Actions to approve: full titles, no icons */
-.appr ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.item { border: 1px solid var(--line); background: var(--surface); }
-.item[data-open] { border-color: var(--line-2); }
+.appr ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.item { border-bottom: 1px solid var(--line); }
+.item:first-child { border-top: 1px solid var(--line); }
 .item[data-status="rejected"] .what b { color: var(--ink-3); text-decoration: line-through; }
-.itemRow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 16px; }
+.itemRow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px 2px; }
 .itemRow input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 .what { display: flex; flex-direction: column; gap: 3px; min-width: 0; line-height: 1.4; }
 .what b { font-size: 15.5px; font-weight: 600; color: var(--ink); }
 .what em { font-style: normal; font-size: 14px; color: var(--ink-2); }
 .editBtn:global(.btn) { flex: none; height: 34px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line-2)); color: var(--accent); font-weight: 600; background: var(--surface); }
 .editBtn:global(.btn):hover { border-color: var(--accent); }
-.editBtn[aria-expanded="true"] { background: var(--accent); color: var(--solid-fg); border-color: var(--accent); }
-.edit { padding: 0 16px 16px; }
+.editBtn[aria-expanded="true"] { border-color: var(--accent); background: var(--hover); }
+.edit { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .3s cubic-bezier(.2, .7, .2, 1), opacity .25s ease; }
+.item[data-open] .edit { grid-template-rows: 1fr; opacity: 1; }
+.editIn { min-height: 0; overflow: hidden; padding: 0 2px 0 34px; }
+.item[data-open] .editIn { padding-bottom: 18px; }
+@media (prefers-reduced-motion: reduce) { .edit { transition: none; } }
 .hint { margin-top: 10px; font-size: 13.5px; color: var(--ink-3); }

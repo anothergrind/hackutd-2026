@@ -14,9 +14,9 @@ const asset = (id: string, property_id: string, kind: string) => ({ id, property
 const TEN = { lone: randomUUID(), med: randomUUID(), bright: randomUUID(), park: randomUUID() };
 const T: Record<string, Row[]> = ((globalThis as unknown as { __opscrewTables?: Record<string, Row[]> }).__opscrewTables ??= {
   properties: [
-    { id: AVON, name: "Avon Center", address: "100 Market Street, Dallas, TX", building_type: "Mixed-use", lat: 32.7767, lon: -96.797 },
-    { id: NORTH, name: "Northstar Tower", address: "2500 Innovation Drive, Dallas, TX", building_type: "Office", lat: 32.9857, lon: -96.7502 },
-    { id: DC1, name: "Avon DC1", address: "4000 Data Way, Richardson, TX", building_type: "Data center", lat: 32.9483, lon: -96.7299 },
+    { id: AVON, name: "Comerica Bank Tower", address: "1717 Main Street, Dallas, TX", building_type: "Office", lat: 32.7767, lon: -96.797 },
+    { id: NORTH, name: "Fountain Place", address: "1445 Ross Avenue, Dallas, TX", building_type: "Office", lat: 32.9857, lon: -96.7502 },
+    { id: DC1, name: "Dallas Infomart", address: "1950 N Stemmons Freeway, Dallas, TX", building_type: "Data center", lat: 32.9483, lon: -96.7299 },
   ],
   assets: [
     ...["UTIL-FEED-1", "SWGR-1", "GEN-1", "UPS-A", "UPS-B"].map((a) => asset(a, DC1, "power")),

@@ -9,26 +9,54 @@ const DC1 = "00000000-0000-0000-0000-000000000003", CENTER = "00000000-0000-0000
 /** `quiet` buildings start healthy (no open tickets or energy anomalies) and never get demo incidents. */
 export type Site = { code: string; from: string; id: string; name: string; address: string; building_type: string; lat: number; lon: number; quiet?: boolean };
 
+// Every building is a real building at its real address. The incidents in this demo are simulated.
 export const SITES: Site[] = [
-  { code: "PLN", from: DC1, id: "00000000-0000-0000-0000-000000000013", name: "Plano DC2", address: "6100 Legacy Drive, Plano, TX", building_type: "Data center", lat: 33.0776, lon: -96.8236 },
-  { code: "IRV", from: DC1, id: "00000000-0000-0000-0000-000000000023", name: "Irving DC3", address: "7600 Las Colinas Blvd, Irving, TX", building_type: "Data center", lat: 32.8902, lon: -96.9578 },
-  { code: "AUS", from: DC1, id: "00000000-0000-0000-0000-000000000033", name: "Austin DC4", address: "9800 N Lamar Blvd, Austin, TX", building_type: "Data center", lat: 30.372, lon: -97.697 },
-  { code: "LGT", from: CENTER, id: "00000000-0000-0000-0000-000000000011", name: "Legacy Tower", address: "5800 Granite Parkway, Plano, TX", building_type: "Mixed-use", lat: 33.0807, lon: -96.8186 },
-  { code: "UPT", from: CENTER, id: "00000000-0000-0000-0000-000000000021", name: "Uptown Plaza", address: "2500 McKinney Ave, Dallas, TX", building_type: "Mixed-use", lat: 32.7979, lon: -96.8031 },
-  { code: "GAL", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000012", name: "Galleria Office Park", address: "13355 Noel Road, Dallas, TX", building_type: "Office", lat: 32.9306, lon: -96.8199 },
-  { code: "FRS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000022", name: "Frisco Commons", address: "3000 Internet Blvd, Frisco, TX", building_type: "Office", lat: 33.1023, lon: -96.8285 },
-  { code: "HOU", from: DC1, id: "00000000-0000-0000-0000-000000000043", name: "Houston DC5", address: "5150 Westway Park Blvd, Houston, TX", building_type: "Data center", lat: 29.8435, lon: -95.5566 },
-  { code: "RCS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000032", name: "Richardson Square", address: "1201 E Campbell Road, Richardson, TX", building_type: "Office", lat: 32.9773, lon: -96.7064 },
-  { code: "SUG", from: CENTER, id: "00000000-0000-0000-0000-000000000031", name: "Sugar Land Plaza", address: "2245 Texas Drive, Sugar Land, TX", building_type: "Mixed-use", lat: 29.5966, lon: -95.6216 },
-  { code: "SAT", from: DC1, id: "00000000-0000-0000-0000-000000000053", name: "San Antonio DC6", address: "5455 Rogers Road, San Antonio, TX", building_type: "Data center", lat: 29.4952, lon: -98.6886, quiet: true },
-  { code: "FTW", from: DC1, id: "00000000-0000-0000-0000-000000000063", name: "Fort Worth DC7", address: "4800 Alliance Gateway, Fort Worth, TX", building_type: "Data center", lat: 32.9726, lon: -97.3097, quiet: true },
-  { code: "DOM", from: CENTER, id: "00000000-0000-0000-0000-000000000041", name: "Domain Tower", address: "11601 Alterra Parkway, Austin, TX", building_type: "Mixed-use", lat: 30.4021, lon: -97.7254, quiet: true },
-  { code: "LCC", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000042", name: "Las Colinas Center", address: "5221 N O'Connor Blvd, Irving, TX", building_type: "Office", lat: 32.8807, lon: -96.9481, quiet: true },
-  { code: "ADP", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000052", name: "Addison Point", address: "15455 Dallas Parkway, Addison, TX", building_type: "Office", lat: 32.9562, lon: -96.8227, quiet: true },
+  // Data centers (equipment copied from the original data center)
+  { code: "PLN", from: DC1, id: "00000000-0000-0000-0000-000000000013", name: "2323 Bryan Street", address: "2323 Bryan Street, Dallas, TX", building_type: "Data center", lat: 32.7907, lon: -96.7957 },
+  { code: "IRV", from: DC1, id: "00000000-0000-0000-0000-000000000023", name: "1649 West Frankford", address: "1649 W Frankford Road, Carrollton, TX", building_type: "Data center", lat: 33.0005, lon: -96.9172 },
+  { code: "AUS", from: DC1, id: "00000000-0000-0000-0000-000000000033", name: "7000 Burleson Road", address: "7000 Burleson Road, Austin, TX", building_type: "Data center", lat: 30.205, lon: -97.702 },
+  { code: "HOU", from: DC1, id: "00000000-0000-0000-0000-000000000043", name: "1301 Fannin Street", address: "1301 Fannin Street, Houston, TX", building_type: "Data center", lat: 29.7543, lon: -95.365 },
+  { code: "LNG", from: DC1, id: "00000000-0000-0000-0000-000000000073", name: "6431 Longhorn Drive", address: "6431 Longhorn Drive, Irving, TX", building_type: "Data center", lat: 32.908, lon: -96.9711 },
+  { code: "SAT", from: DC1, id: "00000000-0000-0000-0000-000000000053", name: "850 East Collins", address: "850 E Collins Blvd, Richardson, TX", building_type: "Data center", lat: 32.9851, lon: -96.7117, quiet: true },
+  { code: "FTW", from: DC1, id: "00000000-0000-0000-0000-000000000063", name: "4500 Like Way", address: "4500 Like Way, Fort Worth, TX", building_type: "Data center", lat: 32.9587, lon: -97.323, quiet: true },
+  // Office towers (equipment copied from the original office tower with the air handler)
+  { code: "LGT", from: CENTER, id: "00000000-0000-0000-0000-000000000011", name: "Bank of America Plaza", address: "901 Main Street, Dallas, TX", building_type: "Office", lat: 32.779, lon: -96.802 },
+  { code: "UPT", from: CENTER, id: "00000000-0000-0000-0000-000000000021", name: "Trammell Crow Center", address: "2001 Ross Avenue, Dallas, TX", building_type: "Office", lat: 32.7883, lon: -96.8013 },
+  { code: "SUG", from: CENTER, id: "00000000-0000-0000-0000-000000000031", name: "Frost Bank Tower", address: "401 Congress Avenue, Austin, TX", building_type: "Office", lat: 30.2665, lon: -97.743 },
+  { code: "TGT", from: CENTER, id: "00000000-0000-0000-0000-000000000051", name: "Thanksgiving Tower", address: "1601 Elm Street, Dallas, TX", building_type: "Office", lat: 32.7815, lon: -96.798 },
+  { code: "JPM", from: CENTER, id: "00000000-0000-0000-0000-000000000071", name: "JPMorgan Chase Tower", address: "2200 Ross Avenue, Dallas, TX", building_type: "Office", lat: 32.787, lon: -96.799 },
+  { code: "DOM", from: CENTER, id: "00000000-0000-0000-0000-000000000041", name: "One Shell Plaza", address: "910 Louisiana Street, Houston, TX", building_type: "Office", lat: 29.7597, lon: -95.3666, quiet: true },
+  { code: "PNZ", from: CENTER, id: "00000000-0000-0000-0000-000000000061", name: "Pennzoil Place", address: "711 Louisiana Street, Houston, TX", building_type: "Office", lat: 29.7605, lon: -95.3627, quiet: true },
+  // Office towers (equipment copied from the original office tower with the electrical panel)
+  { code: "GAL", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000012", name: "Williams Tower", address: "2800 Post Oak Boulevard, Houston, TX", building_type: "Office", lat: 29.7398, lon: -95.4616 },
+  { code: "FRS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000022", name: "Renaissance Tower", address: "1201 Elm Street, Dallas, TX", building_type: "Office", lat: 32.7818, lon: -96.7994 },
+  { code: "RCS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000032", name: "Wells Fargo Plaza", address: "1000 Louisiana Street, Houston, TX", building_type: "Office", lat: 29.757, lon: -95.368 },
+  { code: "HRT", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000072", name: "Heritage Plaza", address: "1111 Bagby Street, Houston, TX", building_type: "Office", lat: 29.7584, lon: -95.3712 },
+  { code: "FTS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000092", name: "Frost Tower", address: "111 W Houston Street, San Antonio, TX", building_type: "Office", lat: 29.426, lon: -98.495 },
+  { code: "LCC", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000042", name: "Burnett Plaza", address: "801 Cherry Street, Fort Worth, TX", building_type: "Office", lat: 32.7495, lon: -97.3313, quiet: true },
+  { code: "ADP", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000052", name: "Weston Centre", address: "112 E Pecan Street, San Antonio, TX", building_type: "Office", lat: 29.4277, lon: -98.4925, quiet: true },
+  { code: "TLB", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000062", name: "Tower Life Building", address: "310 S St Mary's Street, San Antonio, TX", building_type: "Office", lat: 29.4219, lon: -98.4913, quiet: true },
+  { code: "CRS", from: NORTHSTAR, id: "00000000-0000-0000-0000-000000000082", name: "The Crescent", address: "200 Crescent Court, Dallas, TX", building_type: "Office", lat: 32.795, lon: -96.8035, quiet: true },
 ];
 
+/** The three original buildings, renamed to real buildings at their real addresses. */
+export const ORIGINALS = [
+  { id: DC1, name: "Dallas Infomart", address: "1950 N Stemmons Freeway, Dallas, TX", building_type: "Data center", lat: 32.8016, lon: -96.8205 },
+  { id: CENTER, name: "Comerica Bank Tower", address: "1717 Main Street, Dallas, TX", building_type: "Office", lat: 32.7803, lon: -96.7985 },
+  { id: NORTHSTAR, name: "Fountain Place", address: "1445 Ross Avenue, Dallas, TX", building_type: "Office", lat: 32.7843, lon: -96.801 },
+];
+
+/** Earlier made-up names, replaced in old notes, tickets and incident text by scripts/rename-buildings.ts. */
+export const OLD_NAMES: Record<string, string> = {
+  "Avon DC1": "Dallas Infomart", "Avon Center": "Comerica Bank Tower", "Northstar Tower": "Fountain Place",
+  "Plano DC2": "2323 Bryan Street", "Irving DC3": "1649 West Frankford", "Austin DC4": "7000 Burleson Road", "Houston DC5": "1301 Fannin Street",
+  "San Antonio DC6": "850 East Collins", "Fort Worth DC7": "4500 Like Way", "Legacy Tower": "Bank of America Plaza", "Uptown Plaza": "Trammell Crow Center",
+  "Sugar Land Plaza": "Frost Bank Tower", "Domain Tower": "One Shell Plaza", "Galleria Office Park": "Williams Tower", "Frisco Commons": "Renaissance Tower",
+  "Richardson Square": "Wells Fargo Plaza", "Las Colinas Center": "Burnett Plaza", "Addison Point": "Weston Centre",
+};
+
 /** Original building names, replaced in copied notes and tickets. */
-export const BASE_NAMES: Record<string, string> = { [DC1]: "Avon DC1", [CENTER]: "Avon Center", [NORTHSTAR]: "Northstar Tower" };
+export const BASE_NAMES: Record<string, string> = Object.fromEntries(ORIGINALS.map((o) => [o.id, o.name]));
 
 const CODE_RE = new RegExp(`^(?:${SITES.map((s) => s.code).join("|")})-`);
 /** The original equipment tag behind a copied one (PLN-CRAH-A1 → CRAH-A1). */

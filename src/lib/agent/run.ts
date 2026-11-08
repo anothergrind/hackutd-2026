@@ -89,7 +89,9 @@ export async function runAgent(agent: AgentId, task: string, ctx: RunCtx, mode: 
     let pendingNote = "";
     try {
       for (let turn = 0; turn < cfg.max_turns; turn++) {
+        const t0 = Date.now();
         const reply = await chat(messages, Object.values(tools).map((t) => t.spec), cfg.model);
+        const llm = { model: reply.model, via: reply.via, ms: Date.now() - t0 };
         // Every specialist connected on the Agents canvas runs. If the Lead is about to wrap up or hand off to
         // Dispatch without asking some of them, ask them now (in canvas order) and give the Lead their findings.
         if (cfg.kind === "lead" && !filledIn) {
@@ -112,13 +114,13 @@ export async function runAgent(agent: AgentId, task: string, ctx: RunCtx, mode: 
             pendingNote = note;
           }
         }
-        messages.push(reply);
+        messages.push({ role: "assistant", content: reply.content, tool_calls: reply.tool_calls });
         if (!reply.tool_calls?.length) {
           const text = reply.content?.trim() || "Done.";
-          await ctx.log(agent, "final", { text });
+          await ctx.log(agent, "final", { text, llm });
           return text;
         }
-        if (reply.content?.trim()) await ctx.log(agent, "thought", { text: reply.content.trim() });
+        await ctx.log(agent, "thought", { text: reply.content?.trim() || "", llm });
         const calls = reply.tool_calls.map((c: ToolCall) => {
           let args: Record<string, unknown> = {};
           try { args = JSON.parse(c.function.arguments || "{}"); } catch { args = { _unparsed: c.function.arguments }; }

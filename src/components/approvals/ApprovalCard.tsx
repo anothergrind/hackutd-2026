@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Md from "@/components/ui/Md";
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { api, ago, usd, when } from "@/lib/client";
@@ -98,7 +99,7 @@ export default function ApprovalCard({ a, onDone, context, inline }: { a: Approv
               <dt>To</dt><dd>{str(p.tenant_name)} <span className={s.dim}>{str(p.to)}</span></dd>
               <dt>Subject</dt><dd>{plainText(str(p.subject))}</dd>
             </dl>
-            <p className={s.message}>{plainText(str(p.message))}</p>
+            <p className={s.message}><Md text={plainText(str(p.message))} /></p>
           </>
         ))}
         {a.kind === "schedule_change" && (editing ? (

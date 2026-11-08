@@ -26,11 +26,16 @@ const HOSTED_MODEL = "nvidia/nemotron-3.5-super-vl-120b-a12b";
 // Nemotron instead of dropping to scripted mode, and skip the self-hosted one for a minute.
 const g = globalThis as unknown as { __nimDownUntil?: number };
 
+/** Where a reply came from, shown in the Full Log: the self-hosted GPU or NVIDIA's hosted API. */
+export type Via = "gpu" | "hosted";
+
 export async function chat(messages: Message[], tools: ToolSpec[], model?: string) {
   const selfHosted = BASE_URL !== HOSTED_URL;
-  if (selfHosted && Date.now() >= (g.__nimDownUntil ?? 0)) {
+  // The GPU serves one model (NEMOTRON_MODEL). Any other model picked for an agent goes to the hosted API.
+  const wantsGpu = selfHosted && (!model || model === nemotronModel());
+  if (wantsGpu && Date.now() >= (g.__nimDownUntil ?? 0)) {
     try {
-      return await chatAt(BASE_URL, model || nemotronModel(), messages, tools);
+      return { ...(await chatAt(BASE_URL, nemotronModel(), messages, tools)), via: "gpu" as Via, model: nemotronModel() };
     } catch (e) {
       // Only a connection failure switches over; a real model error is reported as is.
       if (!(e instanceof TypeError) && !/fetch failed|ECONNREFUSED|timeout|aborted/i.test(String(e))) throw e;
@@ -38,7 +43,8 @@ export async function chat(messages: Message[], tools: ToolSpec[], model?: strin
       console.warn("[nemotron] self-hosted NIM unreachable, using hosted Nemotron for now");
     }
   }
-  return chatAt(HOSTED_URL, selfHosted ? HOSTED_MODEL : model || nemotronModel(), messages, tools);
+  const id = wantsGpu ? HOSTED_MODEL : model || (selfHosted ? HOSTED_MODEL : nemotronModel());
+  return { ...(await chatAt(HOSTED_URL, id, messages, tools)), via: "hosted" as Via, model: id };
 }
 
 async function chatAt(base: string, id: string, messages: Message[], tools: ToolSpec[]) {
@@ -55,7 +61,7 @@ async function chatAt(base: string, id: string, messages: Message[], tools: Tool
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(60_000),
-      body: JSON.stringify({ model: id, messages, tools, tool_choice: "auto", temperature: 0.2, max_tokens: 2048 }),
+      body: JSON.stringify({ model: id, messages, ...(tools.length ? { tools, tool_choice: "auto" } : {}), temperature: 0.2, max_tokens: 2048 }),
     });
     if (response.ok) {
       const data = (await response.json()) as { choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[] };

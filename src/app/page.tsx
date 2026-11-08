@@ -86,7 +86,13 @@ export default function Home() {
     setNote(`Started ${r.run_ids.length} demo incidents across every problem type. They finish in about a minute.`);
     return r.run_ids[0] ?? null;
   }, "demo");
-  const reset = () => { if (confirm("Clear all runs?")) void go(async () => { await api("/api/reset", { method: "POST" }); setRunId(null); return null; }, "reset"); };
+  // Clears every incident and loads a clean set: one of each problem type, in different buildings.
+  const reset = () => { if (confirm("Start a fresh demo? This clears all incidents and approvals, then loads one new incident of each type.")) void go(async () => {
+    const r = await api<{ run_ids: string[] }>("/api/demo/fresh", { method: "POST" });
+    setFilter("all");
+    setNote(`Loaded ${r.run_ids.length} fresh incidents. They finish analyzing in a few seconds.`);
+    return r.run_ids[0] ?? null;
+  }, "reset"); };
   const label = filter === "all" ? "All Incident Types" : filter === "custom" ? "From Your Data" : filter === "sweep" ? "Nightly Check" : SCENARIOS.find((x) => x.id === filter)?.label ?? filter;
 
   return (
@@ -96,7 +102,7 @@ export default function Home() {
         sub="AI agents analyze an incident, price the risk of waiting and prepare the repair for your approval."
         actions={<>
           {switcher}
-          {status.data?.reset_enabled && runId && <button type="button" className="btn ghost sm" disabled={!!busy} onClick={reset}><Icon name="reset" size={13} />Reset</button>}
+          {status.data?.reset_enabled && <button type="button" className="btn ghost sm" disabled={!!busy} onClick={reset} title="Clear everything and load one fresh incident of each type"><Icon name="reset" size={13} />{busy === "reset" ? "Loading…" : "Fresh Demo"}</button>}
           <button type="button" className="btn" disabled={!!busy || running} onClick={() => setCustom(true)}><Icon name="plus" size={14} />New Incident From Data</button>
           <div className={s.split}>
             <select className="input" value={filter} onChange={(e) => pick(e.target.value)} aria-label="Incident type">

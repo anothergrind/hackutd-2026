@@ -159,7 +159,7 @@ export const SCENARIOS: Scenario[] = [
     id: "office-ahu",
     plain: { reported: "Water was found under an air handler on Floor 4 for the third time today.", problem: "an air handler on Floor 4 is leaking, and its drain pan was only patched last year" },
     label: "Office AHU leak",
-    blurb: "Condensation under AHU-04 at Avon Center",
+    blurb: "Condensation under AHU-04 at Comerica Bank Tower",
     property_id: "00000000-0000-0000-0000-000000000001",
     signal: { asset_id: "AHU-04", source: "ticket", metric: "leak_report", value: 1, message: "Third report this morning: moisture under the AHU-04 supply vent, east corridor warm." },
     hints: {
