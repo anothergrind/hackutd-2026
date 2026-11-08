@@ -1,5 +1,5 @@
 .deck { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; background: var(--bg); color: var(--ink-2); animation: deckIn .28s ease-out both; }
-.deck[data-dark] { background: var(--solid); }
+.deck[data-dark] { background: var(--rail); }
 @keyframes deckIn { from { opacity: 0; } }
 
 .top { display: flex; align-items: center; gap: 16px; height: 64px; padding: 0 40px; flex: none; }
@@ -43,14 +43,14 @@
 
 /* Slide 2 */
 .brand { display: flex; align-items: center; gap: 22px; margin-top: 20px; }
-.mark { display: grid; place-items: center; width: 84px; height: 84px; background: var(--solid); color: var(--mint); font-size: 32px; font-weight: 800; }
+.mark { display: grid; place-items: center; width: 84px; height: 84px; background: var(--rail); color: var(--mint); font-size: 32px; font-weight: 800; }
 .name { margin: 0; font-size: clamp(60px, 8vw, 112px); font-weight: 800; letter-spacing: -.035em; line-height: 1; color: var(--ink); }
 .lede { margin-top: 22px; max-width: 760px; font-size: 22px; line-height: 1.45; color: var(--ink-2); }
 .flow { list-style: none; margin: 52px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; counter-reset: f; }
 .flow li { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 0 20px 0 0; animation: up .5s cubic-bezier(.2, .7, .2, 1) both; }
 .flow li::after { content: ""; position: absolute; top: 22px; left: 54px; right: 10px; height: 2px; background: repeating-linear-gradient(90deg, var(--line-2) 0 6px, transparent 6px 11px); }
 .flow li:last-child::after { display: none; }
-.fIcon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 10px; background: var(--solid); color: var(--mint); }
+.fIcon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 10px; background: var(--rail); color: var(--mint); }
 .flow li:last-child .fIcon { background: var(--mint); color: #012a2d; }
 .flow b { font-size: 18px; font-weight: 700; color: var(--ink); }
 .flow em { font-style: normal; font-size: 14.5px; line-height: 1.4; color: var(--ink-3); }

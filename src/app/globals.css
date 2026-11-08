@@ -24,31 +24,31 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #011c1e; --surface: #012427; --surface-2: #022b2f; --line: #0d3d40; --line-2: #1a5155;
-    --ink: #eaf1ef; --ink-2: #a9bdb8; --ink-3: #6f8783; --hover: rgba(255, 255, 255, .04);
+    --bg: #111111; --surface: #1a1a1a; --surface-2: #202020; --line: #2c2c2c; --line-2: #3d3d3d;
+    --ink: #ededed; --ink-2: #b3b3b3; --ink-3: #858585; --hover: rgba(255, 255, 255, .04);
     --solid: #17e88f; --solid-fg: #012a2d;
     --accent: #17e88f; --accent-soft: rgba(23, 232, 143, .1);
     --ok: #3ddc97; --ok-soft: rgba(61, 220, 151, .1);
     --warn: #e0b04c; --warn-soft: rgba(224, 176, 76, .11);
     --err: #f2867c; --err-soft: rgba(242, 134, 124, .1);
     --a-lead: #17e88f; --a-triage: #dbd99a; --a-sensor: #80bbad; --a-lease: #8fb3d9; --a-dispatch: #5fc7a8;
-    --rail: #00171a; --rail-ink: #cfe0da; --rail-ink-2: #7f9f97; --rail-line: rgba(255, 255, 255, .08); --rail-active: rgba(23, 232, 143, .08);
-    --stage: #011f22;
+    --rail: #0a0a0a; --rail-ink: #d6d6d6; --rail-ink-2: #8c8c8c; --rail-line: rgba(255, 255, 255, .08); --rail-active: rgba(23, 232, 143, .08);
+    --stage: #151515;
     --pop: 0 18px 40px -16px rgba(0, 0, 0, .7), 0 0 0 1px var(--line);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #011c1e; --surface: #012427; --surface-2: #022b2f; --line: #0d3d40; --line-2: #1a5155;
-  --ink: #eaf1ef; --ink-2: #a9bdb8; --ink-3: #6f8783; --hover: rgba(255, 255, 255, .04);
+  --bg: #111111; --surface: #1a1a1a; --surface-2: #202020; --line: #2c2c2c; --line-2: #3d3d3d;
+  --ink: #ededed; --ink-2: #b3b3b3; --ink-3: #858585; --hover: rgba(255, 255, 255, .04);
   --solid: #17e88f; --solid-fg: #012a2d;
   --accent: #17e88f; --accent-soft: rgba(23, 232, 143, .1);
   --ok: #3ddc97; --ok-soft: rgba(61, 220, 151, .1);
   --warn: #e0b04c; --warn-soft: rgba(224, 176, 76, .11);
   --err: #f2867c; --err-soft: rgba(242, 134, 124, .1);
   --a-lead: #17e88f; --a-triage: #dbd99a; --a-sensor: #80bbad; --a-lease: #8fb3d9; --a-dispatch: #5fc7a8;
-  --rail: #00171a; --rail-ink: #cfe0da; --rail-ink-2: #7f9f97; --rail-line: rgba(255, 255, 255, .08); --rail-active: rgba(23, 232, 143, .08);
-  --stage: #011f22;
+  --rail: #0a0a0a; --rail-ink: #d6d6d6; --rail-ink-2: #8c8c8c; --rail-line: rgba(255, 255, 255, .08); --rail-active: rgba(23, 232, 143, .08);
+  --stage: #151515;
   --pop: 0 18px 40px -16px rgba(0, 0, 0, .7), 0 0 0 1px var(--line);
   color-scheme: dark;
 }

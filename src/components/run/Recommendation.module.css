@@ -2,7 +2,7 @@
 .card:global(.card) {
   display: flex; flex-direction: column; padding: 24px 28px 26px; background: #e4f1eb; border: 1px solid #c3ddd1; color: var(--ink-2);
 }
-:global([data-theme="dark"]) .card:global(.card) { background: #06362f; border-color: #0f4d43; }
+:global([data-theme="dark"]) .card:global(.card) { background: color-mix(in srgb, var(--mint) 8%, var(--surface)); border-color: color-mix(in srgb, var(--mint) 22%, var(--surface)); }
 .card[data-tone="bad"] .verdict { color: var(--err); }
 .top { display: flex; align-items: center; justify-content: space-between; }
 .badge { display: inline-flex; align-items: center; gap: 6px; font: 600 12px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
