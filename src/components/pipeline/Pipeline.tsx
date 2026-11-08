@@ -6,15 +6,17 @@ import { nowDoing } from "@/components/run/LiveActivity";
 import Icon from "@/components/ui/Icon";
 import SidePanel from "@/components/ui/SidePanel";
 import { api, hoursText, usd, when } from "@/lib/client";
-import { assetName, payerOf, payerSentence, plainCall, plainFinding, plainText, reportType, titleCase } from "@/lib/plain";
+import { assetName, payerOf, plainCall, plainFinding, plainText, reportType, titleCase } from "@/lib/plain";
 import { scenarioByLabel } from "@/lib/scenarios";
 import type { Approval, Run, Step } from "@/lib/types";
 import type { AgentView, CrewMember } from "@/lib/view";
 import type { Verification } from "@/lib/verify";
 import VerifyStep from "./VerifyStep";
+import LeaseRef, { PayerSentence } from "@/components/lease/LeaseRef";
 import s from "./Pipeline.module.css";
 
-export type PStatus = "pending" | "running" | "done" | "waiting" | "skipped" | "failed";
+import { stepStatuses, type PStatus } from "@/lib/steps";
+export type { PStatus };
 
 type R = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const secs = (a?: number, b?: number) => (a && b ? `${((b - a) / 1000).toFixed(1)}s` : "");
@@ -99,20 +101,10 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
   const sc = scenarioByLabel(run.title);
 
   const inv = specs.map((a) => agents[a.id]);
-  const invSt: PStatus = !specs.length ? "skipped" : inv.every((v) => v?.st === "SUCCEEDED") ? "done" : inv.some((v) => v?.st === "FAILED") ? "failed" : inv.some((v) => v && v.st !== "PENDING") ? "running" : "pending";
   const invStart = Math.min(...inv.map((v) => v?.start ?? Infinity)), invEnd = Math.max(...inv.map((v) => v?.end ?? 0));
   const dv = dispatch ? agents[dispatch.id] : undefined;
-  const dispSt: PStatus = !dispatch ? "skipped" : dv?.st === "PENDING" || !dv ? (finished ? "skipped" : "pending") : agentStatus(dv);
-  const apprSt: PStatus = pending.length ? "waiting" : approvals.length ? "done" : finished ? "skipped" : "pending";
-  const fixedSt: PStatus = approvals.length && !pending.length && sent.length ? "done" : finished && !approvals.length ? "skipped" : "pending";
-  const statuses: PStatus[] = [
-    "done",
-    memory ? "done" : lead?.st === "RUNNING" ? "running" : "pending",
-    invSt,
-    risk ? "done" : invSt === "done" && !finished ? "running" : finished ? "skipped" : "pending",
-    dispSt, apprSt, fixedSt,
-    verification?.status === "passed" ? "done" : verification?.status === "failed" ? "failed" : verification ? "running" : fixedSt === "skipped" ? "skipped" : "pending",
-  ];
+  const statuses = stepStatuses({ run, approvals, crew, agents, verification });
+  const [, , invSt, , dispSt, apprSt, fixedSt] = statuses;
   const repairApproved = approvals.some((a) => a.kind === "work_order" && a.status === "sent");
   const payer = payerOf(agents.lease);
 
@@ -187,10 +179,10 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
                 <tr className={s.total}><td>Cost of delay</td><td /><td className="c-err">{money(risk.wait_usd)}</td></tr>
                 <tr className={s.total}><td>Repair cost</td><td>planned repair</td><td className="c-ok">{money(risk.fix_usd)}</td></tr>
                 <tr><td>Time to failure</td><td /><td>{hoursText(risk.hours_until_failure)}</td></tr>
-                {payer && <tr><td>Who pays for the repair</td><td>{payer.ref}</td><td>{payer.name}</td></tr>}
+                {payer && <tr><td>Who pays for the repair</td><td><LeaseRef text={payer.ref} /></td><td>{payer.name}</td></tr>}
               </tbody>
             </table>
-            {payer && <p className={s.finding} style={{ padding: "8px 0 0" }}>{payerSentence(payer)}</p>}
+            {payer && <p className={s.finding} style={{ padding: "8px 0 0" }}><PayerSentence p={payer} /></p>}
             <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>These numbers come from a fixed formula, not from the AI guessing.</p>
           </>
         )}

@@ -7,14 +7,15 @@ import type { Hints } from "@/lib/scenarios";
 import { runAgent } from "./run";
 import type { Facts, RunCtx, Signal } from "./tools";
 
-type Start = { signal: Signal; propertyId: string | null; hints: Hints; trigger: "incident" | "sweep" | "manual"; title: string };
+type Start = { signal: Signal; propertyId: string | null; hints: Hints; trigger: "incident" | "sweep" | "manual"; title: string; mode?: "scripted" };
 
 /**
  * Records the signal and the run, then returns `execute`, which the route hands to `after()`
  * so the HTTP response returns immediately and the agents keep working.
  */
 export async function startRun(db: SupabaseClient, input: Start) {
-  const mode = agentMode();
+  // "scripted" can be forced per run (bulk demo data); otherwise live when a key is set.
+  const mode = input.mode ?? agentMode();
   const { data: event, error } = await db.from("telemetry_events")
     .insert({ asset_id: input.signal.asset_id, source: input.signal.source, metric: input.signal.metric, value: input.signal.value, message: input.signal.message.slice(0, 1000) })
     .select("id, asset_id, source, metric, value, message").single();

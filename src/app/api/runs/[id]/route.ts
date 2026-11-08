@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/http";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { forecastFor } from "@/lib/forecast";
 import { checkVerification } from "@/lib/verify";
 
 export const dynamic = "force-dynamic";
@@ -18,5 +19,7 @@ export const GET = handle(async (_request: Request, { params }: { params: Promis
   if (steps.error) throw new Error(steps.error.message);
   // Runs the after-repair check when it comes due; table may be missing before migration 007.
   const verification = await checkVerification(db, id).catch(() => null);
-  return NextResponse.json({ run: run.data, steps: steps.data, approvals: approvals.data ?? [], verification });
+  // Sensor readings, best-fit line and failure time for the forecast chart (ticks the live feed too).
+  const forecast = await forecastFor(db, run.data, steps.data ?? []).catch(() => null);
+  return NextResponse.json({ run: run.data, steps: steps.data, approvals: approvals.data ?? [], verification, forecast });
 });

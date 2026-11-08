@@ -25,7 +25,7 @@ export type Approval = {
   decided_by: string | null; decision_note: string | null; decided_at: string | null; created_at: string;
 };
 
-export type RunDetail = { run: Run; steps: Step[]; approvals: Approval[]; verification?: import("@/lib/verify").Verification | null };
+export type RunDetail = { run: Run; steps: Step[]; approvals: Approval[]; verification?: import("@/lib/verify").Verification | null; forecast?: import("@/lib/forecast").Forecast | null };
 
 export type SweepScore = { property_id: string; name: string; building_type: string; score: number; reasons: { text: string; points: number }[] };
 export type Sweep = { id: string; status: string; scores: SweepScore[]; started_run_id: string | null; created_at: string; finished_at: string | null };

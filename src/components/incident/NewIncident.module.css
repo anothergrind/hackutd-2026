@@ -1,0 +1,11 @@
+.form { display: flex; flex-direction: column; gap: 14px; padding: 4px 24px 24px; }
+.form h2 { font-size: 24px; font-weight: 700; color: var(--ink); }
+.help { margin: -6px 0 2px; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.readHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.readHead :global(.label) { margin: 0; }
+.actions { display: flex; gap: 6px; }
+.file { position: relative; overflow: hidden; cursor: pointer; }
+.file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.readings { font-family: var(--mono); font-size: 13px; }
+.note { font-size: 13.5px; color: var(--ink-3); }

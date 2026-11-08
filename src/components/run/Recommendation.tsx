@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Icon from "@/components/ui/Icon";
 import { api } from "@/lib/client";
-import { payerSentence, recommendation } from "@/lib/plain";
+import { recommendation } from "@/lib/plain";
+import { PayerSentence } from "@/components/lease/LeaseRef";
 import type { Verification } from "@/lib/verify";
 import type { Approval, Run } from "@/lib/types";
 import type { AgentView, CrewMember } from "@/lib/view";
@@ -33,7 +34,7 @@ export default function Recommendation({ run, approvals, agents, crew, verificat
       </div>
       <h2 className={`${s.verdict} rec-verdict`}>{r.verdict}</h2>
       {r.why && <p className={s.why}>{r.why}</p>}
-      {r.payer && <p className={s.problem}><b>Cost Responsibility:</b> {payerSentence(r.payer)}</p>}
+      {r.payer && <p className={s.problem}><b>Cost Responsibility:</b> <PayerSentence p={r.payer} /></p>}
 
       {(r.reasons.length > 0 || r.ifApproved.length > 0) && (
         <div className={`${s.cols} rec-cols`}>

@@ -1,8 +1,8 @@
 // Run FIRST: npm run smoke
 // 1) lists Nemotron models your key can use, 2) checks the chosen model returns tool_calls.
 const key = process.env.NVIDIA_API_KEY;
-const base = process.env.NVIDIA_BASE_URL ?? "https://integrate.api.nvidia.com/v1";
-const model = process.env.NEMOTRON_MODEL ?? "nvidia/nemotron-3.5-super-vl-120b-a12b";
+const base = process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
+const model = process.env.NEMOTRON_MODEL || "nvidia/nemotron-3.5-super-vl-120b-a12b";
 if (!key) throw new Error("Set NVIDIA_API_KEY in .env.local (get one at build.nvidia.com)");
 
 const models = await (await fetch(`${base}/models`, { headers: { Authorization: `Bearer ${key}` } })).json();

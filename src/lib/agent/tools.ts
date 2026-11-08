@@ -5,6 +5,7 @@ import type { AgentId } from "@/lib/roster";
 import type { Hints } from "@/lib/scenarios";
 import { blastRadius, upstreamOf, type Edge } from "./graph";
 import { activeAlerts } from "@/lib/nws";
+import { latestTag, readSeries } from "@/lib/sensors";
 import { hoursToLimit, linearTrend, priceRisk } from "./math";
 
 export type Signal = { id?: string; asset_id: string; source: string; metric: string; value: number | null; message: string };
@@ -126,7 +127,8 @@ export const leadTools: Record<string, Tool> = {
       await getAsset(ctx.db, assetId);
       const outage = num(args, "outage_hours", 0.5, 72);
       const repair = num(args, "repair_cost_usd", 0, 1_000_000);
-      const hours = args.hours_until_failure == null || args.hours_until_failure === "" ? null : num(args, "hours_until_failure", 0, 10_000);
+      // If the model leaves out the time to failure, use what Sensor Watch already measured in this incident.
+      const hours = args.hours_until_failure == null || args.hours_until_failure === "" ? ctx.facts.trend?.hours_to_limit ?? null : num(args, "hours_until_failure", 0, 10_000);
       const { tenants, penaltyPerHour } = await tenantsDownstream(ctx.db, assetId, outage);
       const risk = { ...priceRisk({ penaltyPerHour, outageHours: outage, repairCostUsd: repair, hoursUntilFailure: hours }), asset_id: assetId, outage_hours: outage, penalty_per_hour: penaltyPerHour };
       ctx.facts.risk = risk;
@@ -219,11 +221,15 @@ export const sensorTools: Record<string, Tool> = {
     }, ["asset_id", "metric", "limit"]),
     async run(args, ctx) {
       const id = str(args, "asset_id", 50), metric = str(args, "metric", 60), limit = num(args, "limit", -1e6, 1e6);
-      const rows = must(await ctx.db.from("telemetry_events").select("value, created_at").eq("asset_id", id).eq("metric", metric).not("value", "is", null).order("created_at").limit(200)) as { value: number; created_at: string }[];
+      // The newest sensor history for this metric (last two weeks), oldest first. Its tag is kept so the
+      // incident's forecast chart shows exactly the readings that were analyzed.
+      const seriesTag = await latestTag(ctx.db, id, metric);
+      const pts = await readSeries(ctx.db, id, metric, 14, seriesTag);
+      const rows = pts.slice(-200).map((p) => ({ value: p.v, created_at: p.t }));
       const fit = linearTrend(rows.map((r) => ({ t: Date.parse(r.created_at), value: Number(r.value) })));
       if (!fit) return { asset_id: id, metric, error: `Only ${rows.length} readings; need 3 or more for a trend.` };
       const hours = hoursToLimit(fit.latest, fit.slopePerHour, limit);
-      const out = { asset_id: id, metric, slope_per_day: Math.round(fit.slopePerDay * 1000) / 1000, latest: fit.latest, limit, hours_to_limit: hours == null ? null : Math.round(hours * 10) / 10, r2: Math.round(fit.r2 * 1000) / 1000, readings: rows.length };
+      const out = { asset_id: id, metric, slope_per_day: Math.round(fit.slopePerDay * 1000) / 1000, latest: fit.latest, limit, hours_to_limit: hours == null ? null : Math.round(hours * 10) / 10, r2: Math.round(fit.r2 * 1000) / 1000, readings: rows.length, series: seriesTag };
       ctx.facts.trend = out;
       return out;
     },

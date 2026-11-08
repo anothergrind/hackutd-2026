@@ -4,13 +4,21 @@
 .no { color: var(--err); font-weight: 600; }
 .btns { display: flex; gap: 8px; }
 .small { font-size: 13px; color: var(--ink-3); }
-.chart { width: 100%; max-width: 460px; height: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
-.limit { stroke: var(--err); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: .7; }
-.repair { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 3; }
-.lbl { font-size: 11px; fill: var(--ink-3); font-family: var(--sans); }
-.before { fill: none; stroke: var(--ink-3); stroke-width: 2; }
-.good { fill: none; stroke: var(--ok); stroke-width: 2.2; }
-.bad { fill: none; stroke: var(--err); stroke-width: 2.2; }
-.dBefore { fill: var(--ink-3); }
-.dGood { fill: var(--ok); }
-.dBad { fill: var(--err); }
+.chart { width: 100%; max-width: 620px; height: auto; padding: 4px 0; font-family: var(--sans); overflow: visible; }
+.zoneGood { fill: var(--ok); opacity: .05; }
+.zoneBad { fill: var(--err); opacity: .05; }
+.grid { stroke: var(--line); stroke-width: 1; opacity: .7; }
+.base { stroke: var(--line-2); stroke-width: 1; }
+.axis { font-size: 11.5px; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+.zone { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; fill: var(--ink-3); }
+.limit { stroke: var(--err); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.limitLbl { font-size: 12px; font-weight: 700; fill: var(--err); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+.repair { stroke: var(--ink-2); stroke-width: 1; }
+.before { fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-linejoin: round; }
+.good { fill: none; stroke: var(--ok); stroke-width: 2.5; stroke-linejoin: round; }
+.bad { fill: none; stroke: var(--err); stroke-width: 2.5; stroke-linejoin: round; }
+.dBefore { fill: var(--ink-3); stroke: var(--surface); stroke-width: 1.5; }
+.dGood { fill: var(--ok); stroke: var(--surface); stroke-width: 2; }
+.dBad { fill: var(--err); stroke: var(--surface); stroke-width: 2; }
+.valGood { font-size: 13px; font-weight: 700; fill: var(--ok); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+.valBad { font-size: 13px; font-weight: 700; fill: var(--err); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }

@@ -11,7 +11,7 @@ import type { Facts, RunCtx } from "./tools";
 export type Call = { name: string; args: Record<string, unknown> };
 export type Move = { thought?: string; calls: Call[] } | { final: string };
 
-type AgentMove = (turn: number, ctx: RunCtx, available: string[]) => Move;
+type AgentMove = (turn: number, ctx: RunCtx, available: string[], cfg: AgentConfig) => Move;
 type Tenant = NonNullable<Facts["tenants"]>[number];
 type Vendor = NonNullable<Facts["vendors"]>[number];
 
@@ -106,7 +106,6 @@ function leadMove(turn: number, ctx: RunCtx, available: string[]): Move {
         calls: [],
       };
     }
-
     const task = `Fix ${h.root} before it fails. Protects ${usd(f.risk?.wait_usd ?? 0)}. Draft the work order, any schedule change, and notices for affected tenants.`;
     return { thought: "Worth fixing now. Handing the fix to Dispatch.", calls: [{ name: dispatch, args: { task } }] };
   }
@@ -401,6 +400,6 @@ const BUILTIN_MOVES: Record<string, AgentMove> = {
 
 export function scriptedMove(cfg: AgentConfig, turn: number, ctx: RunCtx, available: string[]): Move {
   const builtinMove = cfg.builtin ? BUILTIN_MOVES[cfg.id] : undefined;
-  if (builtinMove) return builtinMove(turn, ctx, available);
+  if (builtinMove) return builtinMove(turn, ctx, available, cfg);
   return genericMove(cfg, turn, ctx, available);
 }

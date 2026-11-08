@@ -2,6 +2,7 @@
 // actions instead of tool names, and full sentences for each finding and the final recommendation.
 
 import { scenarioByLabel } from "@/lib/scenarios";
+import { baseAsset } from "@/lib/sites";
 import type { Approval, Run, Step } from "@/lib/types";
 import type { Verification } from "@/lib/verify";
 import { summarize, type AgentView, type CrewMember } from "@/lib/view";
@@ -16,9 +17,9 @@ const ASSETS: Record<string, string> = {
   "AHU-04": "air handler 4", "FLOOR-4-EAST": "the Floor 4 east offices", "PANEL-12B": "electrical panel 12B",
   "HVAC-12": "the Floor 12 air conditioning", "FLOOR-12": "the Floor 12 offices",
 };
-export const assetName = (id?: string | null) => (id ? ASSETS[id] ?? id : "the equipment");
+export const assetName = (id?: string | null) => (id ? ASSETS[baseAsset(id)] ?? id : "the equipment");
 /** Short label for an equipment chip: "Main chiller", "Backup battery A". */
-export const assetLabel = (id: string) => cap((ASSETS[id] ?? id).replace(/^the /, ""));
+export const assetLabel = (id: string) => cap((ASSETS[baseAsset(id)] ?? id).replace(/^the /, ""));
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const TOOL: Record<string, string> = {
@@ -34,7 +35,7 @@ export const toolVerb = (name?: string) => (name?.startsWith("ask_") ? "Asked a 
 export const plainCall = (step: Step) => `${toolVerb(step.content.name)} → ${summarize(step)}`;
 
 /** Swap equipment tags for names inside any sentence. */
-export const plainText = (text: string) => text.replace(/\b[A-Z]+(?:-[A-Z0-9]+)+\b/g, (tag) => ASSETS[tag] ?? tag);
+export const plainText = (text: string) => text.replace(/\b[A-Z]+(?:-[A-Z0-9]+)+\b/g, (tag) => ASSETS[baseAsset(tag)] ?? tag);
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const hrs = (h: number) => (h < 48 ? `about ${Math.round(h)} hours` : `about ${Math.round(h / 24)} days`);
@@ -45,6 +46,11 @@ const tool = (v: AgentView | undefined, name: string): R | undefined => {
 
 export const METRIC_LABEL: Record<string, { label: string; unit: string }> = {
   supply_temp_f: { label: "water temperature", unit: "°F" }, health_pct: { label: "health", unit: "%" }, panel_temp_f: { label: "temperature", unit: "°F" },
+  battery_health_pct: { label: "battery health", unit: "%" }, condensate_level_pct: { label: "drain pan level", unit: "%" }, fan_amps: { label: "fan current", unit: " A" },
+  loop_pressure_psi: { label: "pipe pressure", unit: " psi" }, refrigerant_psi: { label: "refrigerant pressure", unit: " psi" }, coolant_temp_f: { label: "coolant temperature", unit: "°F" },
+  filter_dp_inwc: { label: "filter pressure", unit: " in. w.c." },
+  voltage_pct: { label: "voltage", unit: "%" }, busbar_temp_f: { label: "busbar temperature", unit: "°F" },
+  cpu_load_pct: { label: "controller load", unit: "%" }, condensate_pump_amps: { label: "pump current", unit: " A" },
 };
 export const metricLabel = (m: string) => METRIC_LABEL[m] ?? { label: m.replace(/_/g, " "), unit: "" };
 
