@@ -1,6 +1,6 @@
 # Canary — HackUTD 2026 (CBRE × NVIDIA × NMC²)
 
-**Live on Vercel: [hackutd-2026-liard.vercel.app](https://hackutd-2026-liard.vercel.app)**. It's password-protected, so ask the team for the login.
+**Live on Vercel: [hackutd-2026-liard.vercel.app](https://hackutd-2026-liard.vercel.app)**. Open to anyone, no login needed.
 
 Five Nemotron agents that catch a building failure early, price it, and fix it after a manager approves.
 A **Lead agent** reads building memory, sends **Ticket Triage**, **Sensor Watch** and **Lease / SLA** off in
@@ -52,7 +52,7 @@ hosted model for a minute and then retry the GPU. An agent given a different mod
 Production runs on Vercel at https://hackutd-2026-liard.vercel.app (project `hackutd-2026`).
 
 - **Deploy:** `npx vercel login` once, then `npx vercel deploy --prod`. Pushes to GitHub don't deploy on their own yet.
-- **Environment:** the Supabase keys, `NVIDIA_API_KEY`, `SITE_USER`/`SITE_PASSWORD`, `CRON_SECRET` and `ALLOW_DEMO_RESET`, set with `npx vercel env add <NAME> production`.
+- **Environment:** the Supabase keys, `NVIDIA_API_KEY`, `CRON_SECRET` and `ALLOW_DEMO_RESET`, set with `npx vercel env add <NAME> production`.
   `NVIDIA_BASE_URL` is left unset, so production uses NVIDIA's hosted Nemotron. The Brev GPU is only reachable through a laptop's tunnel.
 - **Cron:** Vercel Cron calls `/api/sweep/cron` daily at 07:00 UTC (`vercel.json`) with `CRON_SECRET`.
 - **Shared data:** production and local dev share one Supabase project, so runs, approvals and **Reset demo** affect both.
@@ -132,7 +132,7 @@ Each run also says **who pays** for the repair (Lease agent's `lease_responsibil
 
 ## Recent changes
 
-- **Deployed on Vercel** behind the site password (see Deployment).
+- **Deployed on Vercel**, open for judges to try (see Deployment).
 - **Self-hosted Nemotron on Brev:** the crew runs on the team's L40S through `scripts/tunnel.sh`, falling back to NVIDIA's hosted API.
 - **Ask Canary** answers questions about the portfolio, and the **presentation** now has architecture and tracks slides.
 - **Dark theme** uses near-black and greys instead of dark teal.
