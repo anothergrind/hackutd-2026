@@ -24,4 +24,4 @@ export async function deleteAgent(db: SupabaseClient, id: string) {
 
 /** What the UI needs to draw a past run even if the crew changed since. */
 export const crewSnapshot = (crew: AgentConfig[]) =>
-  crew.filter((a) => a.enabled).map(({ id, name, role, color, icon, kind }) => ({ id, name, role, color, icon, kind }));
+  crew.filter((a) => a.enabled).map(({ id, name, role, color, icon, kind, after, x, y, pins }) => ({ id, name, role, color, icon, kind, after, x, y, pins }));

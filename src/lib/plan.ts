@@ -54,15 +54,15 @@ export function choose(items: Candidate[], technicians: number, budget: number) 
     const tenantPays = c.payer?.party === "tenant";
     const landlordCost = tenantPays ? 0 : c.work_order.cost_usd;
     const base = { run_id: c.run_id, building: c.building, title: c.title, problem: c.problem, wait_usd: c.risk.wait_usd, fix_usd: c.work_order.cost_usd, hours_left: c.risk.hours_until_failure, landlord_cost: 0, payer: c.payer?.name ?? "Landlord", rank: i + 1 };
-    const hrs = c.risk.hours_until_failure == null ? "no deadline yet" : `fails in ~${Math.round(c.risk.hours_until_failure)} h`;
+    const hrs = c.risk.hours_until_failure == null ? "no failure deadline yet" : `fails in about ${Math.round(c.risk.hours_until_failure)} hours`;
     if (techs > 0 && landlordCost <= left) {
       techs -= 1; left -= landlordCost;
-      return { ...base, decision: "fix_tonight", landlord_cost: landlordCost, reason: `${hrs}; waiting risks ${money(c.risk.wait_usd)} vs ${money(c.work_order.cost_usd)} to fix${tenantPays ? ` (billed to ${c.payer!.name} per lease)` : ""}.` };
+      return { ...base, decision: "fix_tonight", landlord_cost: landlordCost, reason: `${hrs}; delay could cost ${money(c.risk.wait_usd)} against a ${money(c.work_order.cost_usd)} repair${tenantPays ? `, billed to ${c.payer!.name} under their lease` : ""}.` };
     }
     const why = techs <= 0 ? "no technician left tonight" : `over the remaining budget (${money(left)})`;
     return c.mitigation
       ? { ...base, decision: "mitigate", reason: `${why}; a temporary change keeps it safe until morning.` }
-      : { ...base, decision: "defer", reason: `${why}; lowest risk of tonight's problems (${money(c.risk.wait_usd)}).` };
+      : { ...base, decision: "defer", reason: `${why}; lowest cost of delay tonight (${money(c.risk.wait_usd)}).` };
   });
   const fixed = plan.filter((p) => p.decision === "fix_tonight");
   const summary = {

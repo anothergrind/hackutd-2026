@@ -33,8 +33,7 @@ export default function Recommendation({ run, approvals, agents, crew, verificat
       </div>
       <h2 className={`${s.verdict} rec-verdict`}>{r.verdict}</h2>
       {r.why && <p className={s.why}>{r.why}</p>}
-      {r.problem && <p className={s.problem}><b>Issue:</b> {r.problem}.</p>}
-      {r.payer && <p className={s.problem}><b>Cost Responsibility:</b> {payerSentence(r.payer)} <span className={s.clause}>&ldquo;{r.payer.text}&rdquo;</span></p>}
+      {r.payer && <p className={s.problem}><b>Cost Responsibility:</b> {payerSentence(r.payer)}</p>}
 
       {(r.reasons.length > 0 || r.ifApproved.length > 0) && (
         <div className={`${s.cols} rec-cols`}>
@@ -59,7 +58,6 @@ export default function Recommendation({ run, approvals, agents, crew, verificat
             <Icon name="check" size={15} />{busy ? "Sending…" : "Approve All Actions"}
           </button>
           <button type="button" className="btn" onClick={onReview}>Review Actions</button>
-          <span className={s.note}>Nothing is sent until approved.</span>
           {err && <span className="c-err">{err}</span>}
         </div>
       )}

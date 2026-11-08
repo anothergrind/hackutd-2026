@@ -6,8 +6,9 @@ import ApprovalCard from "@/components/approvals/ApprovalCard";
 import PageHeader from "@/components/shell/PageHeader";
 import Icon from "@/components/ui/Icon";
 import SidePanel from "@/components/ui/SidePanel";
-import { ago, api, usd, usePoll } from "@/lib/client";
-import { titleCase } from "@/lib/plain";
+import TonightPlan from "@/components/plan/TonightPlan";
+import { api, usd, usePoll } from "@/lib/client";
+import { reportType, titleCase } from "@/lib/plain";
 import { scenarioByLabel } from "@/lib/scenarios";
 import type { Approval, Run } from "@/lib/types";
 import s from "./approvals.module.css";
@@ -32,6 +33,7 @@ const SORTS: { id: SortKey; label: string }[] = [
 const ORDER = { work_order: 0, schedule_change: 1, tenant_notice: 2 } as const;
 
 const statusOf = (r: Problem): Status => r.status === "running" ? "working" : r.status === "error" ? "failed" : (r.pending ?? 0) > 0 ? "needs" : "resolved";
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const summaryOf = (r: Problem) => scenarioByLabel(r.title)?.plain.problem ?? r.summary ?? "";
 const hoursLeft = (r: Problem) => r.risk?.hours_until_failure ?? null;
 
@@ -70,10 +72,19 @@ export default function Approvals() {
   const actions = (appr.data?.approvals ?? []).filter((a) => a.run_id === openId).sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
   const pendingIds = actions.filter((a) => a.status === "pending").map((a) => a.id);
   const refresh = () => { void runs.refresh(); void appr.refresh(); };
+  const [stormBusy, setStormBusy] = useState(false);
+  async function storm() {
+    setStormBusy(true);
+    try { await api("/api/storm", { method: "POST" }); } finally { setStormBusy(false); refresh(); }
+  }
 
   return (
     <>
-      <PageHeader title="Approvals" sub="Every problem the AI found, in one list. Open one to review and approve its actions." />
+      <PageHeader
+        title="Approvals"
+        sub="Every incident in one list. Open an incident to approve its actions, or plan tonight's repairs across all of them."
+        actions={<button type="button" className="btn" disabled={stormBusy || counts.working > 0} onClick={() => { void storm(); }}><Icon name="zap" size={14} />{stormBusy ? "Starting…" : "Start Storm Night"}</button>}
+      />
 
       <section className="card">
         <div className={s.bar}>
@@ -85,7 +96,7 @@ export default function Approvals() {
             ))}
           </div>
           <div className={s.tools}>
-            <label className={s.search}><Icon name="search" size={14} /><input className="input" placeholder="Search problems" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+            <label className={s.search}><Icon name="search" size={14} /><input className="input" placeholder="Search incidents" value={q} onChange={(e) => setQ(e.target.value)} /></label>
             <select className="input" value={building} onChange={(e) => setBuilding(e.target.value)} aria-label="Building">
               <option value="all">All buildings</option>
               {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -95,12 +106,12 @@ export default function Approvals() {
             </select>
           </div>
         </div>
-        <p className={s.showing}>Showing {shown.length} of {counts.all} problems · {counts.needs} pending approval</p>
+        <p className={s.showing}>Showing {shown.length} of {counts.all} incidents · {counts.needs} pending approval{counts.working ? ` · ${counts.working} still being analyzed` : ""}</p>
 
         {shown.length ? (
           <table className={s.table}>
             <thead>
-              <tr><th>Status</th><th>Problem</th><th className="num">Actions Waiting</th><th className="num">Could Cost If We Wait</th><th className="num">Cost to Fix</th><th className="num">Time Left</th><th>Reported</th><th aria-label="Open" /></tr>
+              <tr><th>Status</th><th>Building</th><th>Incident</th><th className="num">Actions Waiting</th><th className="num">Cost of Delay</th><th className="num">Repair Cost</th><th className="num">Time to Failure</th><th aria-label="Open" /></tr>
             </thead>
             <tbody>
               {shown.map((r) => {
@@ -109,43 +120,50 @@ export default function Approvals() {
                 return (
                   <tr key={r.id} onClick={() => setOpenId(r.id)} data-open={openId === r.id || undefined}>
                     <td><span className={`tag ${st.tone}`}>{st.label}</span></td>
-                    <td><span className={s.problem}><b>{r.properties?.name} · {titleCase(r.title ?? "Incident")}</b><em>{summaryOf(r)}</em></span></td>
-                    <td className="num">{r.pending ? <b className="c-warn">{r.pending}</b> : "–"}</td>
+                    <td className={s.bldg}>{r.properties?.name ?? "–"}</td>
+                    <td><span className={s.problem}><b>{titleCase(r.title ?? "Incident")}</b><em>{cap(summaryOf(r))}</em></span></td>
+                    <td className="num">{r.pending || "–"}</td>
                     <td className="num c-err">{usd(r.risk?.wait_usd)}</td>
                     <td className="num">{usd(r.risk?.fix_usd)}</td>
                     <td className="num">{h != null ? `${Math.round(h)} h` : "–"}</td>
-                    <td className="muted">{ago(r.created_at)}</td>
                     <td className={s.go}><Icon name="arrow-right" size={14} /></td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        ) : <p className="empty">{all.length ? "No problems match these filters." : "No problems yet. Start an incident or a storm night."}</p>}
+        ) : <p className="empty">{all.length ? "No incidents match these filters." : "No incidents yet. Start one on Live Incident, or click Start Storm Night."}</p>}
       </section>
 
       {open && (
-        <SidePanel eyebrow={open.properties?.name} label={open.title ?? "Problem"} onClose={() => setOpenId(null)}
+        <SidePanel eyebrow="Incident Details" label={open.title ?? "Incident"} onClose={() => setOpenId(null)}
           footer={<>
-            <Link className="btn sm" href={`/?run=${open.id}`}>Open Full Incident<Icon name="arrow-right" size={13} /></Link>
+            <span />
             {pendingIds.length > 0 && <ApproveAll ids={pendingIds} onDone={refresh} />}
           </>}>
           <div className={s.pHead}>
             <span className={`tag ${STATUS[statusOf(open)].tone}`}>{STATUS[statusOf(open)].label}</span>
             <h2>{titleCase(open.title ?? "Incident")}</h2>
-            <p>{summaryOf(open)}</p>
+            <p className={s.where}><span>Building</span>{open.properties?.name ?? "–"}<span>Report Type</span>{reportType(open.trigger, scenarioByLabel(open.title)?.signal.source)}</p>
+            <p>{cap(summaryOf(open))}.</p>
             <dl className={s.pStats}>
-              <div><dt>Could Cost If We Wait</dt><dd className="c-err">{usd(open.risk?.wait_usd)}</dd></div>
-              <div><dt>Cost to Fix</dt><dd className="c-ok">{usd(open.risk?.fix_usd)}</dd></div>
-              <div><dt>Time Left</dt><dd>{hoursLeft(open) != null ? `${Math.round(hoursLeft(open) ?? 0)} hours` : "–"}</dd></div>
+              <div><dt>Cost of Delay</dt><dd className="c-err">{usd(open.risk?.wait_usd)}</dd></div>
+              <div><dt>Repair Cost</dt><dd className="c-ok">{usd(open.risk?.fix_usd)}</dd></div>
+              <div><dt>Time to Failure</dt><dd>{hoursLeft(open) != null ? `${Math.round(hoursLeft(open) ?? 0)} hours` : "–"}</dd></div>
             </dl>
           </div>
+          <Link className={s.full} href={`/?run=${open.id}`}>
+            <span><b>View Full Incident</b><em>Every step, agent and reason on the Live Incident page</em></span>
+            <Icon name="arrow-right" size={18} />
+          </Link>
           <div className={s.pBody}>
-            <h3>Actions ({actions.length})</h3>
-            {actions.length ? actions.map((a) => <ApprovalCard key={a.id} a={a} onDone={refresh} />) : <p className="muted">The AI prepared no actions for this problem.</p>}
+            <h3>Actions to Approve ({actions.length})</h3>
+            {actions.length ? actions.map((a) => <ApprovalCard key={a.id} a={a} onDone={refresh} />) : <p className="muted">The AI prepared no actions for this incident.</p>}
           </div>
         </SidePanel>
       )}
+
+      <TonightPlan onChanged={refresh} />
     </>
   );
 }

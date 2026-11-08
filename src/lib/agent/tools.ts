@@ -36,6 +36,8 @@ export type RunCtx = {
   hints: Hints;
   facts: Facts;
   crew: AgentConfig[];
+  /** Each specialist's final report, so agents connected after it receive its findings. */
+  reports?: Record<string, string>;
   log: (agent: AgentId, kind: string, content: unknown) => Promise<void>;
 };
 

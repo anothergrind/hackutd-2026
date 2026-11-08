@@ -1,4 +1,5 @@
 import type { AgentConfig } from "@/lib/crew";
+import { stagesOf } from "@/lib/flow";
 import { agentMode, chat, type Message, type ToolCall } from "@/lib/nemotron";
 import { TOOL_LIBRARY, type AgentId } from "@/lib/roster";
 import { RULES } from "./prompts";
@@ -25,9 +26,14 @@ function toolsFor(cfg: AgentConfig, ctx: RunCtx, mode: "live" | "scripted"): Rec
     tools[`ask_${sub.id}`] = {
       spec: { type: "function", function: { name: `ask_${sub.id}`, description: `${sub.name}: ${sub.role}. Tools: ${sub.tools.join(", ")}.`, parameters: { type: "object", properties: { task: { type: "string", description: "What you need, one or two sentences" } }, required: ["task"] } } },
       async run(args) {
-        const task = typeof args.task === "string" && args.task.trim() ? args.task.trim().slice(0, 800) : "Investigate the signal.";
-        const extra = sub.kind === "dispatch" ? tenantsAtRisk(ctx) : "";
-        return { report: await runAgent(sub.id, task + extra, ctx, mode) };
+        let task = typeof args.task === "string" && args.task.trim() ? args.task.trim().slice(0, 800) : "Investigate the signal.";
+        // A specialist connected after others on the Agents canvas gets their findings with its task.
+        const earlier = (sub.after ?? []).filter((u) => u !== "lead" && ctx.reports?.[u])
+          .map((u) => `- ${ctx.crew.find((a) => a.id === u)?.name ?? u}: ${ctx.reports![u]}`);
+        if (earlier.length) task += `\n\nFindings from the agents before you:\n${earlier.join("\n")}`;
+        const report = await runAgent(sub.id, task, ctx, mode);
+        (ctx.reports ??= {})[sub.id] = report;
+        return { report };
       },
     };
   }
@@ -44,9 +50,14 @@ function tenantsAtRisk(ctx: RunCtx) {
 
 function systemPrompt(cfg: AgentConfig, ctx: RunCtx) {
   if (cfg.kind !== "lead") return `${cfg.instructions}\n\n${RULES}`;
-  const subs = ctx.crew.filter((a) => a.kind !== "lead" && a.enabled);
-  const list = subs.map((a) => `- ask_${a.id}: ${a.name} (${a.kind === "dispatch" ? "drafts the fix; call last" : "investigates"}) - ${a.role}`).join("\n");
-  return `${cfg.instructions}\n\nYour specialists:\n${list || "- none enabled; investigate with your own tools"}\n\n${RULES}`;
+  // Run order comes from the connections drawn on the Agents canvas.
+  const stages = stagesOf(ctx.crew);
+  const plan = stages.map((g, i) => `Stage ${i + 1}${g.length > 1 ? " (call these together in ONE turn so they run in parallel)" : ""}${i ? ", only after every Stage " + i + " report is back" : ""}:\n${g.map((a) => `- ask_${a.id}: ${a.name} - ${a.role}`).join("\n")}`).join("\n");
+  const dispatch = ctx.crew.find((a) => a.kind === "dispatch" && a.enabled);
+  const list = `${plan || "No specialists are connected; investigate with your own tools."}${dispatch ? `\nAfter pricing the risk: ask_${dispatch.id}: ${dispatch.name} (drafts the fix; call last) - ${dispatch.role}` : "\nNo Dispatch agent is connected: finish with a brief only."}`;
+  const rules = cfg.rules ?? { min_ratio: 1, urgent_hours: 24 };
+  const rule = `Decision rule: call Dispatch only if waiting costs at least ${rules.min_ratio}× the repair cost, or failure is expected within ${rules.urgent_hours} hours. Otherwise finish with a brief only.`;
+  return `${cfg.instructions}\n\nYour specialists, in run order:\n${list}\n\n${rule}\n\n${RULES}`;
 }
 
 async function execute(agent: AgentId, call: Call, tools: Record<string, Tool>, ctx: RunCtx) {
@@ -116,7 +127,8 @@ async function runScripted(cfg: AgentConfig, ctx: RunCtx, tools: Record<string, 
     }
     // An edited crew may have removed a tool the script wanted; skip those calls.
     const calls = move.calls.filter((c) => tools[c.name]);
-    if (move.thought && calls.length) await ctx.log(cfg.id, "thought", { text: move.thought });
+    // Log the reasoning when tools run, or when the agent deliberately runs none (e.g. a decision rule).
+    if (move.thought && (calls.length || !move.calls.length)) await ctx.log(cfg.id, "thought", { text: move.thought });
     const results = await Promise.all(calls.map((c) => execute(cfg.id, c, tools, ctx)));
     ctx.facts.byAgent ??= {};
     (ctx.facts.byAgent[cfg.id] ??= []).push(...calls.map((c, i) => ({ name: c.name, result: results[i] })));

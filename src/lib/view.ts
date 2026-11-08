@@ -3,7 +3,7 @@ import type { Approval, Run, Step } from "@/lib/types";
 
 export type AgentState = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 export type AgentView = { st: AgentState; now: string; start?: number; end?: number; tools: Step[]; steps: Step[]; final?: string; task?: string };
-export type CrewMember = { id: string; name: string; role: string; color: string; icon: IconKey; kind: AgentKind };
+export type CrewMember = { id: string; name: string; role: string; color: string; icon: IconKey; kind: AgentKind; after?: string[]; x?: number; y?: number; pins?: Record<string, { x: number; y: number }> };
 
 const clip = (s: string, n = 90) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 const money = (n: unknown) => `$${Math.round(Number(n) || 0).toLocaleString("en-US")}`;
@@ -64,10 +64,10 @@ export function approvalCounts(approvals: Approval[]) {
 }
 
 export const STATUS: Record<Run["status"], { label: string; tone: string }> = {
-  running: { label: "RUNNING", tone: "accent" },
-  awaiting_approval: { label: "NEEDS APPROVAL", tone: "warn" },
-  done: { label: "DONE", tone: "ok" },
-  error: { label: "FAILED", tone: "err" },
+  running: { label: "Analyzing", tone: "accent" },
+  awaiting_approval: { label: "Pending Approval", tone: "warn" },
+  done: { label: "Resolved", tone: "ok" },
+  error: { label: "Failed", tone: "err" },
 };
 
 // ---------- Plain-English story of a run ----------

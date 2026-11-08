@@ -1,0 +1,67 @@
+/* Canvas: dotted grid that pans and zooms with the content. */
+.stage { position: relative; overflow: hidden; cursor: grab; touch-action: none; overscroll-behavior: contain; background-color: var(--stage); background-image: radial-gradient(color-mix(in srgb, var(--ink-3) 35%, transparent) 1px, transparent 1.4px); }
+.panning { cursor: grabbing; }
+.canvas { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
+.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+
+/* Connections */
+.edge { fill: none; stroke: var(--line-2); stroke-width: 2; transition: stroke .25s; }
+.edge.done { stroke: color-mix(in srgb, var(--ok) 70%, var(--line-2)); }
+.edge.on { stroke: color-mix(in srgb, var(--accent) 35%, var(--line-2)); }
+.edge.wait { stroke: var(--warn); stroke-dasharray: 6 5; }
+.edgeSel { stroke: var(--accent) !important; stroke-width: 2.5; }
+.locked { stroke-dasharray: 2 5; }
+.ghost { stroke-dasharray: 5 5; }
+.flow { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 10 14; stroke-linecap: round; animation: travel 1s linear infinite; }
+@keyframes travel { to { stroke-dashoffset: -24; } }
+.hit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; pointer-events: stroke; }
+g:has(.hit:hover) .edge { stroke: var(--ink-3); }
+.m_idle { fill: var(--line-2); } .m_on { fill: var(--accent); } .m_done { fill: var(--ok); } .m_wait { fill: var(--warn); } .m_sel { fill: var(--accent); }
+
+/* Agents */
+.node { position: absolute; display: grid; grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 12px; align-content: center; padding: 0 16px 0 14px; border: 1px solid var(--line-2); border-left: 4px solid var(--c); background: var(--surface); cursor: grab; user-select: none; touch-action: none; transition: border-color .2s, box-shadow .2s, opacity .3s; }
+.node:active { cursor: grabbing; }
+.node b { font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; padding-right: 14px; }
+.sub { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: start; }
+.ico { grid-row: span 2; width: 38px; height: 38px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+.on { box-shadow: 0 0 0 2px var(--accent); }
+.loose { border-style: dashed; border-left-style: solid; opacity: .7; }
+.loose .sub { color: var(--warn); }
+
+/* Live state marker in the corner of an agent */
+.state { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; }
+.state i { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--ink-3); }
+.node[data-st="running"] { border-color: var(--accent); border-left-color: var(--c); }
+.node[data-st="running"] .state i { background: var(--accent); animation: blink 1.2s ease-in-out infinite; }
+.node[data-st="done"] .state i { background: var(--ok); }
+.node[data-st="failed"] .state i { background: var(--err); }
+.node[data-st="off"] { opacity: .45; }
+@keyframes blink { 50% { opacity: .25; } }
+
+/* Fixed shapes: Report (start), Lead Decides, Approval (end) */
+.pill { position: absolute; display: flex; align-items: center; gap: 10px; padding: 0 16px; border: 1.5px solid var(--line-2); background: var(--surface); user-select: none; touch-action: none; cursor: grab; }
+.report { border-radius: 28px; border-color: var(--ok); }
+.decide { border-style: solid; }
+.approve { border-radius: 28px; border-style: dashed; }
+.pill[data-st="done"] { border-color: var(--ok); border-style: solid; }
+.pill[data-st="running"] { border-color: var(--accent); }
+.pill[data-st="waiting"] { border-color: var(--warn); border-style: solid; }
+.pico { width: 30px; height: 30px; flex: none; display: grid; place-items: center; color: var(--surface); background: var(--solid); border-radius: 50%; }
+.decide .pico { border-radius: 0; transform: rotate(45deg); width: 24px; height: 24px; margin: 0 3px; }
+.decide .pico svg { transform: rotate(-45deg); }
+.ptext { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.ptext b { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.ptext em { font-style: normal; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Connection dots */
+.port { position: absolute; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--surface); border: 2px solid var(--ink-3); z-index: 1; transition: transform .15s, background .15s, border-color .15s; }
+.in { top: -8px; }
+.out { bottom: -8px; cursor: crosshair; }
+.out:not(.static):hover { transform: scale(1.35); background: var(--accent); border-color: var(--accent); }
+.static { cursor: default; }
+
+/* Zoom controls */
+.zoom { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line-2); background: var(--surface); cursor: default; }
+.zoom button { min-width: 30px; height: 30px; padding: 0 8px; border: 0; background: transparent; color: var(--ink-2); font-size: 15px; cursor: pointer; }
+.zoom button:hover { background: var(--hover); color: var(--ink); }
+.zoom span { min-width: 46px; text-align: center; font-size: 12.5px; color: var(--ink-3); }

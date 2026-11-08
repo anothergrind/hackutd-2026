@@ -18,6 +18,15 @@ async function main() {
     const tpl = TEMPLATES.find((t) => t.id === id)!;
     T.agent_configs.push({ id: `${id}_x`, config: { name: tpl.name, role: tpl.role, icon: tpl.icon, color: tpl.color, instructions: tpl.instructions, tools: tpl.tools, enabled: true } });
   }
+  // Optional: chain agents like the Agents canvas, e.g. AFTER=repeat_x:sensor runs Repeat-Failure after Sensor Watch.
+  for (const pair of (process.env.AFTER ?? "").split(",").filter(Boolean)) {
+    const [id, ups] = pair.split(":");
+    const row = T.agent_configs.find((r: { id: string }) => r.id === id);
+    if (row) row.config.after = ups.split("+");
+    else T.agent_configs.push({ id, config: { after: ups.split("+") } });
+  }
+  // Optional: the Lead's decision rule, e.g. RULE_RATIO=200 makes the cooling incident brief-only.
+  if (process.env.RULE_RATIO) T.agent_configs.push({ id: "lead", config: { rules: { min_ratio: Number(process.env.RULE_RATIO), urgent_hours: Number(process.env.RULE_HOURS ?? 0) } } });
   if (process.env.DISABLE) for (const id of process.env.DISABLE.split(",")) T.agent_configs.push({ id, config: { enabled: false } });
   const scenario = SCENARIOS.find((s) => s.id === (process.argv[2] ?? "cooling-cascade"))!;
   console.log(`\n=== Incident: ${scenario.label} ===`);

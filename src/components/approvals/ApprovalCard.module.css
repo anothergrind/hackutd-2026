@@ -1,11 +1,10 @@
 .card { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
 .card.pending { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); }
-.head { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .ico { width: 32px; height: 32px; border-radius: var(--r); display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); }
-.pending .ico { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
 .title { min-width: 0; display: flex; flex-direction: column; }
-.kind { font: 500 11.5px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
-.title b { font-weight: 500; color: var(--ink); font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kind { font: 600 11.5px var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+.title b { font-weight: 600; color: var(--ink); font-size: 15.5px; }
 .money { display: flex; gap: 12px; margin-top: 2px; font: 500 13px var(--mono); color: var(--ink); }
 .money em { font-style: normal; color: var(--ink-3); font-weight: 400; margin-right: 3px; }
 .body { padding: 12px 16px; font-size: 14.5px; color: var(--ink-2); }
@@ -19,3 +18,13 @@
 .foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px; border-top: 1px solid var(--line); background: var(--surface-2); }
 .when { margin-left: auto; font: 400 12.5px var(--mono); color: var(--ink-3); }
 
+.inline { border: 0; border-top: 1px solid var(--line); }
+.inline .body { padding: 16px 0 4px; }
+.inline .foot { margin: 12px -16px -16px; }
+.kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 14.5px; }
+.kv dt { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+.kv dd { margin: 0; color: var(--ink); }
+.dim { color: var(--ink-3); font-size: 13.5px; margin-left: 4px; }
+.sub { display: block; margin-top: 16px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.steps li { line-height: 1.5; }
+.message { margin-top: 12px; line-height: 1.55; font-size: 14.5px; max-height: 240px; }

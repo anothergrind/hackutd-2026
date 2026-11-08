@@ -55,7 +55,7 @@ export default function VerifyStep({ runId, runTitle, v, repairApproved, refresh
     try { await api("/api/incidents", { method: "POST", json: { scenario_id: sc.id } }); location.reload(); } finally { setBusy(false); }
   }
 
-  if (!v) return <p className="muted">{repairApproved ? "Scheduling the check…" : "Once the repair is approved, the AI checks the sensors again to confirm the problem is gone."}</p>;
+  if (!v) return <p className="muted">{repairApproved ? "Scheduling the check…" : "Once the repair is approved, the AI checks the sensors again to confirm the incident is resolved."}</p>;
   const m = metricLabel(v.metric);
   const latest = v.after[v.after.length - 1]?.v;
 

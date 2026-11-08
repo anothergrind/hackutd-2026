@@ -5,7 +5,8 @@
 // Tool results are saved in ctx.facts, so a later turn can read what an earlier turn found.
 
 import type { AgentConfig } from "@/lib/crew";
-import type { Facts, RunCtx } from "./tools";
+import { stagesOf } from "@/lib/flow";
+import type { RunCtx } from "./tools";
 
 export type Call = { name: string; args: Record<string, unknown> };
 export type Move = { thought?: string; calls: Call[] } | { final: string };
@@ -41,61 +42,19 @@ const BUILTIN_TASK: Record<string, (ctx: RunCtx) => string> = {
   lease: (c) => `Which tenants are hurt if ${c.hints.price_asset} is out for ${c.hints.outage_hours} h, and what is the forecast?`,
 };
 
-/** Built-in specialists get a fixed task; custom ones get a task built from their role. */
-function taskFor(agent: AgentConfig, ctx: RunCtx) {
-  const builtin = BUILTIN_TASK[agent.id];
-  if (builtin) return builtin(ctx);
-  const role = agent.role.replace(/[.?!]+$/, "");
-  return `${role}. The signal is on ${ctx.signal.asset_id}; the likely root is ${ctx.hints.root}.`;
-}
-
-/** Lead: read memory, run every specialist in parallel, price the risk, hand off to Dispatch, save what it learned. */
-function leadMove(turn: number, ctx: RunCtx, available: string[]): Move {
-  const { hints: h, facts: f } = ctx;
-
-  switch (turn) {
-    case 0:
-      return {
-        thought: `New signal on ${ctx.signal.asset_id}. Checking what we already know about this building.`,
-        calls: [{ name: "read_building_memory", args: {} }],
-      };
-
-    case 1: {
-      const specialists = ctx.crew.filter((a) => a.kind === "specialist" && a.enabled);
-      return {
-        thought: `Running ${plural(specialists.length, "check")} at the same time.`,
-        calls: specialists.map((a) => ({ name: `ask_${a.id}`, args: { task: taskFor(a, ctx) } })),
-      };
-    }
-
-    case 2: {
-      // No vendor quote yet: rough estimate of $350 plus $165 per repair hour.
-      const repairCost = f.vendors?.[0]?.est_cost_usd ?? 350 + 165 * h.repair_hours;
-      return {
-        thought: "Pricing the cost of waiting against fixing now.",
-        calls: [{
-          name: "price_risk",
-          args: {
-            asset_id: h.price_asset,
-            outage_hours: h.outage_hours,
-            hours_until_failure: f.trend?.hours_to_limit ?? null,
-            repair_cost_usd: repairCost,
-          },
-        }],
-      };
-    }
-
-    case 3: {
-      if (!available.includes("ask_dispatch")) return { calls: [] }; // Dispatch is switched off
-      const task = `Fix ${h.root} before it fails. Protects ${usd(f.risk?.wait_usd ?? 0)}. Draft the work order, any schedule change, and notices for affected tenants.`;
-      return { thought: "Worth fixing now. Handing the fix to Dispatch.", calls: [{ name: "ask_dispatch", args: { task } }] };
-    }
-
-    case 4: {
-      const month = new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" });
-      const note = `${month}: ${h.problem}. Caught ${hrs(f.risk?.hours_until_failure)} before the limit; fix drafted for approval.`;
-      return { calls: [{ name: "save_memory", args: { asset_id: h.root, note } }] };
-    }
+/** Reasonable arguments for any read-only tool, so a custom specialist can run without an API key. */
+function defaultArgs(tool: string, ctx: RunCtx): Record<string, unknown> | null {
+  const h = ctx.hints;
+  switch (tool) {
+    case "search_tickets": return { days: 30 };
+    case "past_incidents": return { asset_id: h.price_asset };
+    case "get_dependencies": case "get_weather": case "find_vendor": case "check_parts": return { asset_id: h.root };
+    case "get_readings": return { asset_id: ctx.signal.asset_id, days: 14 };
+    case "detect_trend": return h.trend ? { ...h.trend } : null;
+    case "get_energy": return {};
+    case "tenants_at_risk": return { asset_id: h.price_asset, outage_hours: h.outage_hours };
+    case "lease_responsibility": return { asset_id: h.price_asset };
+    default: return null; // writes and linking need real reasoning
   }
 
   // Final summary for the manager.
@@ -324,25 +283,48 @@ function brief(name: string, result: unknown): string {
       const latest = x.work_orders[0];
       return `repeat failure: ${x.work_orders.length} earlier work order(s), latest "${latest.title}" ${latest.days_ago} days ago`;
     }
-    case "detect_trend": {
-      const limit = x.hours_to_limit == null ? "no crossing" : `limit in ~${Math.round(x.hours_to_limit)} h`;
-      return `trend ${x.slope_per_day}/day, ${limit} (r² ${x.r2})`;
-    }
-    case "tenants_at_risk":
-      return `${x.tenants?.length ?? 0} tenants, ${usd(x.penalty_per_hour_usd ?? 0)}/hr`;
-    case "get_dependencies":
-      return `${x.feeds?.length ?? 0} assets downstream`;
-    case "get_readings":
-      return `${x.count ?? 0} recent readings`;
-    case "search_tickets":
-      return `${x.count ?? 0} open tickets`;
-    case "get_weather":
-      if (x.summary?.max_f == null) return "forecast checked";
-      return `forecast high ${Math.round(x.summary.max_f)}°F`;
-    case "get_weather_alerts": {
-      if (!x.count) return "no active weather alerts";
-      const events = x.alerts.map((a: { event: string }) => a.event);
-      return `NWS: ${events.join(", ")}`;
+    case "lead": {
+      // Turn 0 reads memory, then one turn per stage drawn on the Agents canvas, then price, dispatch, save.
+      const stages = stagesOf(ctx.crew);
+      const S = stages.length;
+      if (turn === 0) return { thought: `New signal on ${ctx.signal.asset_id}. Checking what we already know about this building.`, calls: [{ name: "read_building_memory", args: {} }] };
+      if (turn >= 1 && turn <= S) {
+        const group = stages[turn - 1];
+        const ask = (a: AgentConfig) => ({ name: `ask_${a.id}`, args: { task: BUILTIN_TASK[a.id]?.(ctx) ?? `${a.role.replace(/[.?!]+$/, "")}. The signal is on ${ctx.signal.asset_id}; the likely root is ${h.root}.` } });
+        const before = turn > 1 ? `, after stage ${turn - 1} reported back` : "";
+        return {
+          thought: group.length > 1 ? `Stage ${turn}${before}: running ${group.map((a) => a.name).join(", ")} at the same time.` : `Stage ${turn}${before}: asking ${group[0].name}.`,
+          calls: group.map(ask),
+        };
+      }
+      if (turn === S + 1) {
+        const repair = f.vendors?.[0]?.est_cost_usd ?? 350 + 165 * h.repair_hours;
+        return { thought: "Pricing the cost of waiting against fixing now.", calls: [{ name: "price_risk", args: { asset_id: h.price_asset, outage_hours: h.outage_hours, hours_until_failure: f.trend?.hours_to_limit ?? null, repair_cost_usd: repair } }] };
+      }
+      if (turn === S + 2) {
+        const disp = available.find((n) => n.startsWith("ask_") && ctx.crew.find((a) => `ask_${a.id}` === n)?.kind === "dispatch");
+        if (!disp) return { calls: [] };
+        // The Lead's decision rule from the Agents page: repair only when delay costs enough, or failure is close.
+        const rules = cfg.rules ?? { min_ratio: 1, urgent_hours: 24 };
+        const r = f.risk;
+        const urgent = r?.hours_until_failure != null && r.hours_until_failure <= rules.urgent_hours;
+        if (r && !urgent && r.wait_usd < rules.min_ratio * r.fix_usd) {
+          return { thought: `Delay costs ${usd(r.wait_usd)}, under ${rules.min_ratio}× the ${usd(r.fix_usd)} repair, and failure is not within ${rules.urgent_hours} h. Not preparing a repair; reporting a brief.`, calls: [] };
+        }
+        return { thought: "Worth fixing now. Handing the fix to Dispatch.", calls: [{ name: disp, args: { task: `Fix ${h.root} before it fails. Protects ${usd(f.risk?.wait_usd ?? 0)}. Draft the work order, any schedule change, and notices for affected tenants.` } }] };
+      }
+      if (turn === S + 3) {
+        return { calls: [{ name: "save_memory", args: { asset_id: h.root, note: `${new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}: ${h.problem}. Caught ${hrs(f.risk?.hours_until_failure)} before the limit; fix drafted for approval.` } }] };
+      }
+      const r = f.risk;
+      return {
+        final: [
+          `Root cause: ${f.linked?.problem ?? h.problem}.`,
+          f.trend ? `${f.trend.asset_id} crosses its limit in ${hrs(f.trend.hours_to_limit)}.` : "",
+          r ? `Waiting risks ${usd(r.wait_usd)}; fixing now costs ${usd(r.fix_usd)} (saves ${usd(r.saved_usd)}).` : "",
+          `${f.drafts} action${f.drafts === 1 ? "" : "s"} are waiting for your approval.`,
+        ].filter(Boolean).join(" "),
+      };
     }
     case "find_vendor":
       return x.vendors?.[0] ? `${x.vendors[0].name} available` : "no vendor";

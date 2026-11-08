@@ -14,7 +14,7 @@
 .steps li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; font-size: 14px; }
 .at { font: 400 11.5px var(--mono); color: var(--ink-3); padding-top: 3px; }
 .steps p { color: var(--ink-2); line-height: 1.45; }
-.steps li[data-kind="final"] p { color: var(--ink); padding: 8px 10px; border-radius: var(--r); background: var(--ok-soft); }
+.steps li[data-kind="final"] p { color: var(--ink); padding: 8px 10px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
 .steps li[data-kind="error"] p { color: var(--err); }
 .steps details { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
 .steps summary { padding: 6px 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }

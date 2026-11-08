@@ -6,7 +6,7 @@ import { nowDoing } from "@/components/run/LiveActivity";
 import Icon from "@/components/ui/Icon";
 import SidePanel from "@/components/ui/SidePanel";
 import { api, hoursText, usd, when } from "@/lib/client";
-import { assetName, payerOf, payerSentence, plainCall, plainFinding, plainText, titleCase } from "@/lib/plain";
+import { assetName, payerOf, payerSentence, plainCall, plainFinding, plainText, reportType, titleCase } from "@/lib/plain";
 import { scenarioByLabel } from "@/lib/scenarios";
 import type { Approval, Run, Step } from "@/lib/types";
 import type { AgentView, CrewMember } from "@/lib/view";
@@ -53,7 +53,7 @@ function StepPanel({ n, total, title, why, st, result, onClose, onGo, children }
         <StatusIcon st={st} />
         <div>
           <h2>{title}</h2>
-          <p><b>Why:</b> {why}</p>
+          {why && <p><b>Why:</b> {why}</p>}
         </div>
       </div>
       <div className={s.pMeta}><span className={`tag ${st === "done" ? "ok" : st === "waiting" ? "warn" : st === "failed" ? "err" : st === "running" ? "accent" : ""}`}>{ST_LABEL[st]}</span>{result && <span className={s.pResult}>{result}</span>}</div>
@@ -71,7 +71,7 @@ function Row({ n, title, why, st, result, time, open, onToggle, onGo, children, 
       <button type="button" className={`${s.head} pipe-head`} onClick={onToggle} aria-expanded={open} aria-haspopup="dialog" disabled={!children}>
         <StatusIcon st={st} />
         <span className={s.n}>{n}</span>
-        <span className={s.title}><b>{t}</b><em>{why}</em>{st === "running" && live ? <span className={s.live}>{live}</span> : null}</span>
+        <span className={s.title}><b>{t}</b>{why && <em>{why}</em>}{st === "running" && live ? <span className={s.live}>{live}</span> : null}</span>
         <span className={s.result}>{result}</span>
         <span className={s.time}>{time}</span>
         <span className={s.chev}>{children ? <Icon name="arrow-right" size={13} /> : null}</span>
@@ -134,18 +134,18 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
 
   return (
     <ol className={`${s.list} pipe`}>
-      <Row n={1} title="Report Received" why="Every run starts from a real signal, not a question someone typed." st="done" time="0.0s" open={open.has(0)} onGo={go} onToggle={() => toggle(0)}
-        result={run.trigger === "sweep" ? "Found by the nightly check" : "New report"}>
+      <Row n={1} title="Report Received" why="Every analysis starts from a real report, sensor alarm or nightly check." st="done" time="0.0s" open={open.has(0)} onGo={go} onToggle={() => toggle(0)}
+        result={reportType(run.trigger, sig?.source)}>
         <p className={s.quote}>{sc?.plain.reported ?? sig?.message}</p>
-        <p className="muted">{run.properties?.name} · about {assetName(sig?.asset_id)}</p>
+        <p className="muted">Equipment: {assetName(sig?.asset_id).replace(/^the /, "")}</p>
       </Row>
 
-      <Row n={2} live={<span className={s.liveRow}><i /><b>Lead agent</b><span className={s.sep}>·</span>Reading past notes for this building</span>} title="History Review" why="Past problems help spot a repeat failure." st={statuses[1]} open={open.has(1)} onGo={go} onToggle={() => toggle(1)}
+      <Row n={2} live={<span className={s.liveRow}><i /><b>Lead agent</b><span className={s.sep}>·</span>Reading past notes for this building</span>} title="History Review" why="Past repairs at this building reveal repeat failures." st={statuses[1]} open={open.has(1)} onGo={go} onToggle={() => toggle(1)}
         result={memory ? `${memory.r.notes?.length ?? 0} past notes` : null} time={memory ? `${((memory.step.content.ms ?? 0) / 1000).toFixed(1)}s` : ""}>
         {memory?.r.notes?.length ? <ul className={s.notes}>{memory.r.notes.map((nt: R, i: number) => <li key={i}><span>{assetName(nt.asset_id)}</span>{plainText(nt.note)}</li>)}</ul> : <p className="muted">No notes yet.</p>}
       </Row>
 
-      <Row n={3} live={liveOf(specs)} title={specs.length > 1 ? `Investigation (${specs.length} Agents)` : "Investigation"} why="Each agent reads a different kind of information, so nothing is missed." st={invSt} open={open.has(2)} onGo={go} onToggle={() => toggle(2)}
+      <Row n={3} live={liveOf(specs)} title={specs.length > 1 ? `Agent Analysis (${specs.length} Agents)` : "Agent Analysis"} why="Each agent checks a different source: tickets, sensors and leases." st={invSt} open={open.has(2)} onGo={go} onToggle={() => toggle(2)}
         result={invSt === "done" ? "All reported back" : null} time={invEnd ? secs(invStart, invEnd) : ""}>
         <ul className={s.sub}>
           {specs.map((a) => {
@@ -175,8 +175,8 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
         </ul>
       </Row>
 
-      <Row n={4} live={<span className={s.liveRow}><i /><b>Lead agent</b><span className={s.sep}>·</span>Calculating the cost of waiting versus fixing now</span>} title="Cost Analysis" why="To decide whether fixing it now is worth it." st={statuses[3]} open={open.has(3)} onGo={go} onToggle={() => toggle(3)}
-        result={risk ? <><span className="c-err">{money(risk.wait_usd)}</span> if we wait · <span className="c-ok">{money(risk.fix_usd)}</span> to fix</> : null}
+      <Row n={4} live={<span className={s.liveRow}><i /><b>Lead agent</b><span className={s.sep}>·</span>Comparing the cost of delay with the repair cost</span>} title="Cost Analysis" why="Compares the cost of delay with the repair cost." st={statuses[3]} open={open.has(3)} onGo={go} onToggle={() => toggle(3)}
+        result={risk ? <><span className="c-err">{money(risk.wait_usd)}</span> delay · <span className="c-ok">{money(risk.fix_usd)}</span> repair</> : null}
         time={price ? `${((price.step.content.ms ?? 0) / 1000).toFixed(1)}s` : ""}>
         {risk && (
           <>
@@ -184,9 +184,9 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
               <tbody>
                 <tr><td>Lost service for tenants</td><td>{money(risk.penalty_per_hour ?? 0)} per hour × {risk.outage_hours ?? "?"} hours</td><td>{money(risk.penalties_usd)}</td></tr>
                 <tr><td>Emergency repair later</td><td>about 2.5× a planned repair</td><td>{money(risk.emergency_repair_usd)}</td></tr>
-                <tr className={s.total}><td>Cost if we wait</td><td /><td className="c-err">{money(risk.wait_usd)}</td></tr>
-                <tr className={s.total}><td>Cost to fix now</td><td>planned repair</td><td className="c-ok">{money(risk.fix_usd)}</td></tr>
-                <tr><td>Time left</td><td /><td>{hoursText(risk.hours_until_failure)}</td></tr>
+                <tr className={s.total}><td>Cost of delay</td><td /><td className="c-err">{money(risk.wait_usd)}</td></tr>
+                <tr className={s.total}><td>Repair cost</td><td>planned repair</td><td className="c-ok">{money(risk.fix_usd)}</td></tr>
+                <tr><td>Time to failure</td><td /><td>{hoursText(risk.hours_until_failure)}</td></tr>
                 {payer && <tr><td>Who pays for the repair</td><td>{payer.ref}</td><td>{payer.name}</td></tr>}
               </tbody>
             </table>
@@ -196,29 +196,29 @@ export default function Pipeline({ run, steps, approvals, crew, agents, onAgent,
         )}
       </Row>
 
-      <Row n={5} live={dispatch ? liveOf([dispatch]) : null} title="Repair Plan" why="So a manager only has to say yes or no." st={dispSt} open={open.has(4)} onGo={go} onToggle={() => toggle(4)}
+      <Row n={5} live={dispatch ? liveOf([dispatch]) : null} title="Repair Plan" why="Prepares every action so the facility manager only approves or rejects." st={dispSt} open={open.has(4)} onGo={go} onToggle={() => toggle(4)}
         result={approvals.length ? `${approvals.length} actions ready` : dispSt === "running" ? "Preparing…" : dispSt === "skipped" ? "Not needed" : null} time={secs(dv?.start, dv?.end)}>
         <ul className={s.calls}>
           {callList(dv).map((c) => <li key={c.id}><span>{plainCall(c)}</span></li>)}
         </ul>
       </Row>
 
-      <Row n={6} title="Approval" why="The AI never acts on its own. A person decides." st={apprSt} open={open.has(5)} onGo={go} onToggle={() => toggle(5)}
+      <Row n={6} title="Approve Actions" why="" st={apprSt} open={open.has(5)} onGo={go} onToggle={() => toggle(5)}
         result={pending.length ? <b className="c-warn">{pending.length} pending</b> : approvals.length ? `${sent.length} approved` : null}>
         <Approvals approvals={approvals} refresh={refresh} />
       </Row>
 
-      <Row n={7} title={fixedSt === "skipped" ? "Closed" : "Execution"} why={fixedSt === "skipped" ? "Nothing needed to be sent this time." : "Everything you approved has been sent."} st={fixedSt} open={open.has(6)} onGo={go} onToggle={() => toggle(6)}
+      <Row n={7} title={fixedSt === "skipped" ? "Closed" : "Execution"} why={fixedSt === "skipped" ? "No actions were needed for this incident." : "Approved actions are sent to vendors and tenants."} st={fixedSt} open={open.has(6)} onGo={go} onToggle={() => toggle(6)}
         result={fixedSt === "done" ? "Done" : null}>
         {sent.length > 0 ? (
           <ul className={s.done}>
             {sent.map((a) => <li key={a.id}><Icon name="check" size={13} />{doneText(a)}</li>)}
-            <li><Icon name="check" size={13} />Saved a note so it is recognized faster next time</li>
+            <li><Icon name="check" size={13} />Saved a building note so a repeat failure is recognized faster</li>
           </ul>
         ) : <p className="muted">{run.summary ? plainText(run.summary) : "Waiting for the steps above."}</p>}
       </Row>
 
-      <Row n={8} title="Verification" why="Approving is not the end. The AI re-reads the sensors to confirm the problem is gone." st={statuses[7]} open={open.has(7)} onGo={go} onToggle={() => toggle(7)}
+      <Row n={8} title="Verification" why="After the repair, the AI reads the sensors again to confirm the fix." st={statuses[7]} open={open.has(7)} onGo={go} onToggle={() => toggle(7)}
         result={verification?.status === "passed" ? <span className="c-ok">Confirmed fixed</span> : verification?.status === "failed" ? <span className="c-err">Didn&apos;t hold</span> : verification ? "Checking soon…" : null}>
         <VerifyStep runId={run.id} runTitle={run.title} v={verification} repairApproved={repairApproved} refresh={refresh} />
       </Row>
@@ -246,18 +246,18 @@ function Approvals({ approvals, refresh }: { approvals: Approval[]; refresh: () 
   if (!approvals.length) return <p className="muted">The prepared actions appear here.</p>;
   const chosen = pending.filter((a) => picked.has(a.id));
 
-  async function decide(decision: "approve" | "reject") {
+  async function send(ids: string[], decision: "approve" | "reject" | "restore") {
     setBusy(true); setErr("");
-    try { for (const a of chosen) await api(`/api/approvals/${a.id}`, { method: "POST", json: { decision, by: "Facility manager" } }); }
+    try { for (const id of ids) await api(`/api/approvals/${id}`, { method: "POST", json: { decision, by: "Facility manager" } }); }
     catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); refresh(); }
   }
 
   const label = (a: Approval) => {
     const p = a.payload as R;
-    if (a.kind === "work_order") return { what: `Book ${p.vendor_name} to repair it`, meta: `${when(p.scheduled_for)} · costs ${usd(a.cost_usd)}`, icon: "wrench" as const };
-    if (a.kind === "tenant_notice") return { what: `Send a heads-up email to ${p.tenant_name}`, meta: plainText(String(p.subject ?? "")), icon: "mail" as const };
-    return { what: plainText(String(p.change ?? a.title)), meta: `for ${p.hours} hours`, icon: "calendar" as const };
+    if (a.kind === "work_order") return { what: `Book ${p.vendor_name} to repair ${assetName(p.asset_id)}`, meta: `${when(p.scheduled_for)} · ${usd(a.cost_usd)}` };
+    if (a.kind === "tenant_notice") return { what: `Email ${p.tenant_name} about the planned maintenance`, meta: `Subject: ${plainText(String(p.subject ?? ""))}` };
+    return { what: cap(plainText(String(p.change ?? a.title))), meta: `For ${p.hours} hours` };
   };
 
   return (
@@ -266,32 +266,34 @@ function Approvals({ approvals, refresh }: { approvals: Approval[]; refresh: () 
         {approvals.map((a) => {
           const l = label(a);
           const isPending = a.status === "pending";
+          const open = edit === a.id;
           return (
-            <li key={a.id}>
-              <div className={s.item}>
+            <li key={a.id} className={s.item} data-status={a.status} data-open={open || undefined}>
+              <div className={s.itemRow}>
                 {isPending
                   ? <input type="checkbox" checked={picked.has(a.id)} onChange={() => setPicked((p) => { const n = new Set(p); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); return n; })} aria-label={l.what} />
-                  : <StatusIcon st={a.status === "sent" ? "done" : "failed"} small />}
-                <Icon name={l.icon} size={14} />
-                <span className={s.what}><b>{l.what}</b><em>{l.meta}</em></span>
-                {a.protects_usd > 0 && <span className={s.prot}>avoids up to {usd(a.protects_usd)}</span>}
-                {isPending ? <button type="button" className={s.link} onClick={() => setEdit(edit === a.id ? null : a.id)}>{edit === a.id ? "Close" : "Read / edit"}</button>
                   : <span className={`tag ${a.status === "sent" ? "ok" : "err"}`}>{a.status === "sent" ? "Sent" : "Rejected"}</span>}
+                <span className={s.what}><b>{l.what}</b><em>{l.meta}{a.protects_usd > 0 ? ` · avoids up to ${usd(a.protects_usd)}` : ""}</em></span>
+                {isPending && <button type="button" className={`btn sm ${s.editBtn}`} aria-expanded={open} onClick={() => setEdit(open ? null : a.id)}>{open ? "Close" : "Review & Edit"}</button>}
+                {a.status === "rejected" && <button type="button" className={`btn sm ${s.editBtn}`} disabled={busy} onClick={() => { void send([a.id], "restore"); }}>Restore</button>}
               </div>
-              {edit === a.id && <div className={s.edit}><ApprovalCard a={a} onDone={() => { setEdit(null); refresh(); }} /></div>}
+              {open && <div className={s.edit}><ApprovalCard a={a} inline onDone={() => { setEdit(null); refresh(); }} /></div>}
             </li>
           );
         })}
       </ul>
       {pending.length > 0 && (
         <div className={s.actions}>
-          <button type="button" className="btn accent" disabled={busy || !chosen.length} onClick={() => { void decide("approve"); }}>
-            <Icon name="check" size={14} />{busy ? "Sending…" : `Approve ${chosen.length} and send`}
+          <button type="button" className="btn accent" disabled={busy || !chosen.length} onClick={() => { void send(chosen.map((a) => a.id), "approve"); }}>
+            <Icon name="check" size={14} />{busy ? "Sending…" : `Approve ${chosen.length} Selected`}
           </button>
-          <button type="button" className="btn" disabled={busy || !chosen.length} onClick={() => { void decide("reject"); }}>Don&apos;t send</button>
+          <button type="button" className="btn" disabled={busy || !chosen.length} onClick={() => { void send(chosen.map((a) => a.id), "reject"); }}>Reject Selected</button>
           {err && <span className="c-err">{err}</span>}
         </div>
       )}
+      {approvals.some((a) => a.status === "rejected") && <p className={s.hint}>Rejected an action by mistake? Use Restore to return the action to the list.</p>}
     </div>
   );
 }
+
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);

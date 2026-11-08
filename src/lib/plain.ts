@@ -17,6 +17,8 @@ const ASSETS: Record<string, string> = {
   "HVAC-12": "the Floor 12 air conditioning", "FLOOR-12": "the Floor 12 offices",
 };
 export const assetName = (id?: string | null) => (id ? ASSETS[id] ?? id : "the equipment");
+/** Short label for an equipment chip: "Main chiller", "Backup battery A". */
+export const assetLabel = (id: string) => cap((ASSETS[id] ?? id).replace(/^the /, ""));
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const TOOL: Record<string, string> = {
@@ -71,10 +73,12 @@ export function plainFinding(id: string, v: AgentView | undefined, name: string)
     if (!t) return "Checked the leases.";
     const names = (t.tenants ?? []).map((x: R) => x.name).join(" and ");
     const pay = payerOf(v);
-    return `If it fails, ${names || "no tenants"} lose service. Their contracts charge ${money(t.penalty_per_hour_usd ?? 0)} for every hour of outage.${pay ? ` ${payerSentence(pay)}` : ""}${w?.summary?.max_f != null ? ` Forecast high ${Math.round(w.summary.max_f)}°F.` : ""}`;
+    return `If the equipment fails, ${names || "no tenants"} lose service. Their contracts charge ${money(t.penalty_per_hour_usd ?? 0)} for every hour of outage.${pay ? ` ${payerSentence(pay)}` : ""}${w?.summary?.max_f != null ? ` Forecast high ${Math.round(w.summary.max_f)}°F.` : ""}`;
   }
   const e = tool(v, "get_energy"), p = tool(v, "past_incidents");
   if (e?.readings?.[0]) return `${cap(assetName(e.readings[0].equipment))} is using ${e.readings[0].over_baseline_pct}% more power than normal.`;
+  const t = tool(v, "detect_trend");
+  if (t && t.hours_to_limit != null) return `Double-checked the numbers: ${assetName(t.asset_id)} still reaches its limit in ${hrs(t.hours_to_limit)}.`;
   if (p) return p.repeat ? `This has broken before: "${plainText(p.work_orders[0].title)}" ${p.work_orders[0].days_ago} days ago.` : "No earlier repairs on this equipment.";
   return plainText((v.final ?? "").replace(new RegExp(`^${name}:\\s*`), ""));
 }
@@ -87,10 +91,10 @@ export function recommendation(run: Run, approvals: Approval[], agents: Record<s
   // Reasons add facts not already on screen: time left, costs, the problem, who pays and the
   // tenants (named in Cost Responsibility and the Action Plan emails) are shown elsewhere.
   const tri = tool(agents.triage, "link_tickets");
-  if (tri && !tri.error) { const n = tri.linked?.length ?? 0; reasons.push(n === 1 ? "A recent complaint points to the same equipment." : `${n} recent complaints all point to the same equipment.`); }
+  if (tri && !tri.error) { const n = tri.linked?.length ?? 0; const where = tri.root_asset_id ? assetName(tri.root_asset_id) : "the same equipment"; reasons.push(n === 1 ? `A recent complaint traces back to ${where}.` : `${n} recent complaints trace back to ${where}.`); }
   // Custom agents can overlap (two agents checking energy, or one that only counts readings), so
   // keep each finding once and skip ones that state a count or a non-result instead of a reason.
-  const weak = /^(\d+ recent readings?|checked\b|no earlier repairs|no warning trend|waiting to start|working on it)/i;
+  const weak = /^(\d+ recent readings?|checked\b|double-checked|no earlier repairs|no warning trend|waiting to start|working on it)/i;
   for (const a of crew.filter((c) => c.kind === "specialist" && !["triage", "sensor", "lease"].includes(c.id))) {
     if (agents[a.id]?.st !== "SUCCEEDED") continue;
     const f = plainFinding(a.id, agents[a.id], a.name).trim();
@@ -99,13 +103,14 @@ export function recommendation(run: Run, approvals: Approval[], agents: Record<s
   const memory = tool(agents.lead, "read_building_memory");
   if (memory?.notes?.[0] && reasons.length < 4) reasons.push(`Building history: ${plainText(memory.notes[0].note)}`);
 
-  const ifApproved = approvals.filter((a) => a.kind !== "tenant_notice").map((a) => {
+  const live = approvals.filter((a) => a.status !== "rejected"); // rejected actions are no longer part of the plan
+  const ifApproved = live.filter((a) => a.kind !== "tenant_notice").map((a) => {
     const p = a.payload as R;
-    if (a.kind === "work_order") return `${p.vendor_name} comes ${new Date(p.scheduled_for).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" })} to fix it (${money(a.cost_usd)}).`;
+    if (a.kind === "work_order") return `${p.vendor_name} repairs ${assetName(p.asset_id)} on ${new Date(p.scheduled_for).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" })} (${money(a.cost_usd)}).`;
     return `${cap(plainText(String(p.change)))} (for ${p.hours} hours).`;
   });
   // One line for all tenant emails instead of one near-identical line per tenant.
-  const notified = approvals.filter((a) => a.kind === "tenant_notice").map((a) => String((a.payload as R).tenant_name));
+  const notified = live.filter((a) => a.kind === "tenant_notice").map((a) => String((a.payload as R).tenant_name));
   if (notified.length) ifApproved.push(`${notified.length === 1 ? notified[0] : `${notified.slice(0, -1).join(", ")} and ${notified[notified.length - 1]}`} ${notified.length === 1 ? "gets" : "get"} a heads-up email.`);
 
   const pending = approvals.filter((a) => a.status === "pending").length;
@@ -117,7 +122,7 @@ export function recommendation(run: Run, approvals: Approval[], agents: Record<s
   else if (run.status === "running") { verdict = "Analysis in Progress"; tone = "wait"; }
   else if (!risk) { verdict = "No Action Required"; tone = "info"; }
   else if (approvals.length && !pending) { verdict = sent ? "Resolved" : "Declined"; tone = sent ? "done" : "info"; }
-  else if (approvals.length) { verdict = "Immediate Repair"; tone = "act"; }
+  else if (approvals.length) { verdict = "Repair Recommended"; tone = "act"; }
   else { verdict = risk.wait_usd > risk.fix_usd ? "Schedule Repair" : "Monitor"; tone = "info"; }
 
   const why = run.status === "running"
@@ -144,3 +149,8 @@ export function titleCase(text: string): string {
     return w.charAt(0).toUpperCase() + w.slice(1);
   }).join(" ");
 }
+
+const REPORT_TYPE: Record<string, string> = { ticket: "Staff Report", sensor: "Sensor Alarm", cyber: "Security Alert", bms: "Building System Alert", weather: "Weather Alert" };
+/** What kind of report started an incident, in words a manager would use. */
+export const reportType = (trigger: string | null | undefined, source: string | null | undefined) =>
+  trigger === "sweep" ? "Nightly Check" : REPORT_TYPE[source ?? ""] ?? "Report";
