@@ -15,20 +15,37 @@ npm install
 npm run dev          # http://localhost:3000, in-memory data, scripted agents
 ```
 
-Click **Inject** on *Cooling cascade*, watch the graph, then approve the drafts. `npm run dry-run` runs the same
-flow in the terminal and prints every step.
+On **Live Incident**, click **Start Analyzing**, or **Fresh Demo** for one incident of every problem type. Then approve
+the drafts on **Approvals**. `npm run dry-run` runs the same flow in the terminal and prints every step.
 
 ## Go live
 
 1. Copy `.env.example` to `.env.local`.
-2. **Nemotron:** set `NVIDIA_API_KEY` to an `nvapi-...` key from build.nvidia.com, then `npm run smoke` to check tool calling. The rail badge switches from `DEMO` to `NIM`.
+2. **Nemotron:** set `NVIDIA_API_KEY` to an `nvapi-...` key from build.nvidia.com, then run `npm run smoke` to check tool calling.
+   The status in the nav bar then reads **Nemotron live**.
    The default model is `nvidia/nemotron-3.5-super-vl-120b-a12b`; override it with `NEMOTRON_MODEL` or per agent on `/crew`.
-   Leave `NVIDIA_BASE_URL` unset (an empty value breaks every call); set it only to point at your own NIM, e.g. on Brev.
+   Leave `NVIDIA_BASE_URL` unset (an empty value breaks every call); set it only to point at your own NIM (see below).
 3. **Supabase:** set the URL plus the anon and service-role keys, and run `supabase/migrations/001`–`007` in order in the SQL editor.
 4. Restart `npm run dev`.
 
 If Nemotron errors mid-run, that agent falls back to the scripted policy (same tools, same data) unless it has
 already drafted something. Set `OPSCREW_MODE=scripted` to force the fallback on stage.
+
+### Self-hosted Nemotron on the Brev GPU (optional)
+
+The team's Brev instance `opscrew-nim` (L40S) serves `nvidia/nvidia-nemotron-nano-9b-v2` on port 8000.
+
+1. Install the Brev CLI, `brev login`, and get SSH access to the instance. `brev ls` should list it as yours, and
+   `brev refresh` writes its SSH entry. On Windows, do all of this inside WSL (Ubuntu).
+2. Add to `.env.local`:
+   ```
+   NVIDIA_BASE_URL=http://localhost:8000/v1
+   NEMOTRON_MODEL=nvidia/nvidia-nemotron-nano-9b-v2
+   ```
+3. Keep `bash scripts/tunnel.sh` running in its own terminal (`npm run tunnel` also works on macOS/Linux), then run `npm run dev`.
+
+The status reads **Nemotron live** / "GPU server reachable" when it works. If the tunnel drops, calls switch to NVIDIA's
+hosted model for a minute and then retry the GPU. An agent given a different model on `/crew` always uses the hosted API.
 
 ## Deployment
 
@@ -44,13 +61,19 @@ Production runs on Vercel at https://hackutd-2026-liard.vercel.app (project `hac
 
 | Page | What |
 |---|---|
-| `/` | Live incident, one step at a time: Signal → Investigate (agent graph; click an agent for details) → Price → Approve → Fixed. `?step=2` opens a step directly |
-| `/plan` | Tonight's plan: Storm night raises problems in 3 buildings; given technicians and a budget, the AI picks what to fix tonight vs make safe until morning, explains why, and applies the plan on approval |
-| `/approvals` | Queue: edit, approve (executes) or reject every drafted action |
-| `/portfolio` | Sweep scores, each building's dependency chain, tenants and $/hr, work orders sent |
-| `/runs`, `/runs/[id]` | History and step-by-step replay |
-| `/memory` | What past runs learned plus manager notes; the lead reads this first |
-| `/crew` | Crew builder: edit any agent's instructions, tools, model and turn limit, switch specialists on/off, add specialists from templates (Energy Watch, Repeat-Failure Check, Second Opinion) |
+| `/overview` | Landing page (click the Canary logo): what Canary does, savings so far, how an incident is handled |
+| `/` Live Incident | One incident at a time: the report, a sensor forecast with and without the repair, the recommendation, and **What the AI Did** / **Agent Map** / **Full Log** tabs. Start an analysis, load a fresh demo set, or create an incident from your own readings |
+| `/approvals` | Every incident with its drafted actions: edit, approve (executes) or reject. Also **Tonight's Plan** (`#plan`): given technicians and a budget, the AI picks what to fix tonight vs make safe until morning, and **Start Storm Night**, which raises a problem in every building at once |
+| `/portfolio` Buildings | Sweep scores, each building's dependency chain, tenants and $/hr, work orders sent, and building notes (the memory the lead reads first) |
+| `/crew` Agents | Crew builder: edit any agent's instructions, tools, model and turn limit, switch specialists on/off, add specialists from templates (Energy Watch, Repeat-Failure Check, Second Opinion, Weather Watch, Tenant Impact, Vendor Scout, Dependency Mapper, Ticket Scanner, Trend Analyst) |
+| `/runs/[id]` | Step-by-step replay of one run |
+
+`/runs`, `/memory` and `/plan` redirect to Approvals, Buildings and Tonight's Plan.
+
+The nav bar also has:
+- **Ask Canary:** questions answered by Nemotron, grounded only in the live portfolio data.
+- **Present:** a six-slide pitch covering the problem, the solution, the architecture, the live demo, the impact and the tracks. `?present=1`–`6` opens a slide directly.
+- **Light / Dark:** switches the theme. `?theme=light` or `?theme=dark` sets it from a link.
 
 ## Code map
 
@@ -58,6 +81,8 @@ Production runs on Vercel at https://hackutd-2026-liard.vercel.app (project `hac
 src/lib/roster.ts            built-in agents, tool library, models, specialist templates
 src/lib/crew.ts, crewStore.ts  editable crew: defaults + saved agent_configs; snapshot stored per run
 src/lib/scenarios.ts         demo incidents + hints for the scripted mode
+src/lib/sites.ts             the demo buildings
+src/lib/nemotron.ts          Nemotron client: self-hosted NIM first, NVIDIA hosted API as fallback
 src/lib/agent/run.ts         agent loop: Nemotron tool calling, parallel calls, ask_* delegation, fallback
 src/lib/agent/tools.ts       every tool, with argument validation
 src/lib/agent/math.ts        trend fit, hours-to-limit, risk pricing, sweep score (deterministic, tested)
@@ -65,24 +90,56 @@ src/lib/agent/scripted.ts    no-key policy that calls the same tools, one functi
 src/lib/agent/prompts.ts     system prompts
 src/lib/agent/orchestrate.ts starts a run and finishes it
 src/lib/approvals.ts         approve = execute side effect; claim-first so a double click can't send twice
+src/lib/plan.ts              Tonight's Plan: candidates, choosing within technicians and budget, applying
+src/lib/verify.ts            after-repair check that re-reads the sensors
 src/lib/sweep.ts             nightly portfolio scoring, auto-starts the crew
+src/lib/supabase/admin.ts    server-side Supabase client (service role)
 src/lib/supabase/memory.ts   in-memory Supabase stand-in used when no keys are set
+src/proxy.ts                 optional site password (HTTP Basic Auth)
 src/components/run/*         crew graph, timeline, risk card, step log
+src/components/ask/*         Ask Canary panel
+src/components/present/*     presentation deck
 supabase/migrations/005_opscrew.sql   approvals, vendors, parts, memory, sweeps + demo seed
+scripts/                     dry runs, Nemotron smoke test, GPU tunnel, one-time building rename
 ```
 
-API: `POST /api/incidents {scenario_id}`, `GET /api/runs[/id]`, `GET /api/approvals`, `POST /api/approvals/:id {decision, edits?}`,
-`POST /api/sweep`, `GET /api/sweep/cron` (Vercel Cron, `CRON_SECRET`), `GET /api/portfolio`, `GET|POST /api/memory`, `POST /api/reset`, `GET /api/status`.
+**API routes**
 
-Each run also says **who pays** for the repair (Lease agent's `lease_responsibility` tool quotes the lease clause) and, after a repair is approved, **checks the fix worked** by re-reading the sensors (step 8; simulated readings in demo mode, `OPSCREW_VERIFY_DELAY_S`).
+| Area | Routes |
+|---|---|
+| Incidents | `POST /api/incidents {scenario_id}`, `POST /api/incidents/custom` (your own readings), `POST /api/incidents/demo {per_type?}`, `POST /api/demo/fresh`, `POST /api/storm` |
+| Runs | `GET /api/runs`, `GET /api/runs/:id` |
+| Approvals | `GET /api/approvals`, `POST /api/approvals/:id {decision, edits?}` |
+| Plan and verify | `GET\|POST /api/plan`, `POST /api/plan/:id/apply`, `POST /api/verify {run_id, outcome?}` |
+| Sweep | `GET /api/sweep`, `GET /api/sweep/cron` (Vercel Cron, `CRON_SECRET`) |
+| Data | `GET /api/portfolio`, `GET\|POST /api/memory`, `GET /api/leases?ref=` |
+| Crew | `GET\|POST /api/crew`, `PUT\|DELETE /api/crew/:id` |
+| Other | `POST /api/ask`, `POST /api/reset`, `GET /api/status` |
+
+Each run also says **who pays** for the repair (Lease agent's `lease_responsibility` tool quotes the lease clause) and, after a repair is approved, **checks the fix worked** by re-reading the sensors (simulated readings in demo mode, `OPSCREW_VERIFY_DELAY_S`).
+
+## Scripts
+
+| Command | What |
+|---|---|
+| `npm run dev` / `build` / `start` | Next.js |
+| `npm test` | graph and math unit tests |
+| `npm run typecheck` | type check |
+| `npm run smoke` | checks your Nemotron key and model can do tool calling |
+| `npm run dry-run` | one incident end to end in the terminal |
+| `npm run dry-run:plan` | Storm night → plan → apply → fix checks in the terminal |
+| `npm run tunnel` | keeps the Brev GPU reachable at `localhost:8000` |
 
 ## Recent changes
 
-- **NWS weather alerts:** the Lease / SLA agent's new `get_weather_alerts` tool pulls active heat, storm and flood warnings for each building from api.weather.gov (free, no key, US only) and reports any that make an outage worse.
-- **New default model:** `llama-3.3-nemotron-super-49b-v1.5` was retired in Aug 2026 and now returns `410`. The default is `nemotron-3.5-super-vl-120b-a12b`, which ran the full crew live; the `/crew` model list only offers models that pass `npm run smoke`.
-- **Readable scripted mode:** `scripted.ts` is split into one function per agent with named pieces instead of long one-liners. Scripted output is unchanged across all 5 scenarios.
-
-`npm run dry-run:plan` runs Storm night → plan → apply → fix checks in the terminal. `npm test` runs the graph and math unit tests. `npm run typecheck` checks types.
+- **Deployed on Vercel** behind the site password (see Deployment).
+- **Self-hosted Nemotron on Brev:** the crew runs on the team's L40S through `scripts/tunnel.sh`, falling back to NVIDIA's hosted API.
+- **Ask Canary** answers questions about the portfolio, and the **presentation** now has architecture and tracks slides.
+- **Dark theme** uses near-black and greys instead of dark teal.
+- **Cleanup:** removed the old starter-template routes (`/api/projects`, `/api/tracks`, `/api/dashboard`, `/api/health`, `/api/simulate`). `/api/status` is the health check.
+- **NWS weather alerts:** the Lease / SLA agent's `get_weather_alerts` tool pulls active heat, storm and flood warnings for each building from api.weather.gov (free, no key, US only).
+- **Retired models:** `llama-3.3-nemotron-super-49b-v1.5` and `nvidia-nemotron-nano-9b-v2` are retired on NVIDIA's hosted API (`410`).
+  `nano-9b-v2` still works on the self-hosted GPU.
 
 ## Security
 
