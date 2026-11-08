@@ -32,6 +32,7 @@ export const TOOL_LIBRARY: ToolInfo[] = [
   { name: "get_energy", what: "Energy use vs baseline, anomaly score", source: "Energy meters" },
   { name: "tenants_at_risk", what: "Tenants downstream and their SLA exposure", source: "Leases" },
   { name: "get_weather", what: "Live 2-day forecast (Open-Meteo)", source: "Weather API" },
+  { name: "get_weather_alerts", what: "Active NWS watches and warnings", source: "National Weather Service" },
   { name: "lease_responsibility", what: "Who pays for the repair, per the lease", source: "Leases" },
   { name: "find_vendor", what: "Certified vendors, soonest first", source: "Vendors" },
   { name: "check_parts", what: "Spare parts on hand", source: "Parts" },
@@ -54,7 +55,7 @@ export const ROSTER: AgentMeta[] = [
   { id: "lead", name: "Lead agent", role: "Plans, delegates, prices the risk", owns: "The incident", color: "var(--a-lead)", icon: "bot", kind: "lead", tools: t("read_building_memory", "price_risk", "save_memory") },
   { id: "triage", name: "Ticket Triage", role: "Links small tickets into one problem", owns: "Work orders", color: "var(--a-triage)", icon: "ticket", kind: "specialist", tools: t("search_tickets", "link_tickets") },
   { id: "sensor", name: "Sensor Watch", role: "Spots drift, hours to the limit", owns: "Sensors", color: "var(--a-sensor)", icon: "activity", kind: "specialist", tools: t("get_dependencies", "get_readings", "detect_trend") },
-  { id: "lease", name: "Lease / SLA", role: "Who gets hurt, who pays", owns: "Leases + weather", color: "var(--a-lease)", icon: "scale", kind: "specialist", tools: t("tenants_at_risk", "lease_responsibility", "get_weather") },
+  { id: "lease", name: "Lease / SLA", role: "Who gets hurt, who pays", owns: "Leases + weather", color: "var(--a-lease)", icon: "scale", kind: "specialist", tools: t("tenants_at_risk", "lease_responsibility", "get_weather", "get_weather_alerts") },
   { id: "dispatch", name: "Dispatch", role: "Picks a vendor, drafts the fix", owns: "Vendors, parts, notices", color: "var(--a-dispatch)", icon: "truck", kind: "dispatch", tools: t("find_vendor", "check_parts", "draft_work_order", "draft_schedule_change", "draft_tenant_notice") },
 ];
 export const BUILTIN_IDS = ROSTER.map((a) => a.id);
