@@ -43,9 +43,11 @@ export const toolInfo = (name: string) => TOOL_LIBRARY.find((t) => t.name === na
 
 export const MODELS: { id: string; label: string }[] = [
   { id: "", label: "Server default (NEMOTRON_MODEL)" },
-  { id: "nvidia/llama-3.3-nemotron-super-49b-v1.5", label: "Nemotron Super 49B v1.5" },
-  { id: "nvidia/llama-3.1-nemotron-ultra-253b-v1", label: "Nemotron Ultra 253B" },
-  { id: "nvidia/nvidia-nemotron-nano-9b-v2", label: "Nemotron Nano 9B v2" },
+  // All four pass `npm run smoke` (tool calling) on build.nvidia.com as of Nov 2026.
+  { id: "nvidia/nemotron-3.5-super-vl-120b-a12b", label: "Nemotron 3.5 Super 120B" },
+  { id: "nvidia/nemotron-3-ultra-550b-a55b", label: "Nemotron 3 Ultra 550B" },
+  { id: "nvidia/nemotron-3.5-bolt-e4b", label: "Nemotron 3.5 Bolt (small, fast)" },
+  { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", label: "Nemotron 3 Nano Omni 30B" },
 ];
 
 const t = (...names: string[]) => names.map((n) => { const i = toolInfo(n)!; return { name: i.name, what: i.what, writes: i.writes }; });
