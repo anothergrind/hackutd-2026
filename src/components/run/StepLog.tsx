@@ -1,18 +1,19 @@
 "use client";
 
 import { agentMeta } from "@/lib/roster";
+import type { CrewMember } from "@/lib/view";
 import type { Step } from "@/lib/types";
 import { summarize } from "@/lib/view";
 import s from "./StepLog.module.css";
 
 /** Every step, newest first. Tool rows expand to the exact arguments and result. */
-export default function StepLog({ steps, t0 }: { steps: Step[]; t0: string }) {
+export default function StepLog({ steps, t0, crew }: { steps: Step[]; t0: string; crew?: CrewMember[] }) {
   if (!steps.length) return <p className="empty">Steps appear here as the crew works.</p>;
   const base = Date.parse(t0);
   return (
     <div className={s.log}>
       {[...steps].reverse().map((st) => {
-        const meta = agentMeta(st.agent);
+        const meta = crew?.find((c) => c.id === st.agent) ?? agentMeta(st.agent);
         const at = `${((Date.parse(st.created_at) - base) / 1000).toFixed(1)}s`;
         const head = (
           <>

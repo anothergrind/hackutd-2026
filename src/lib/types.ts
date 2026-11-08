@@ -10,6 +10,7 @@ export type Risk = {
 export type Run = {
   id: string; status: RunStatus; trigger: "incident" | "sweep" | "manual"; title: string | null; summary: string | null;
   property_id: string | null; risk: Risk | null; mode: "live" | "scripted"; created_at: string; finished_at: string | null;
+  crew?: { id: string; name: string; role: string; color: string; icon: import("@/lib/roster").IconKey; kind: import("@/lib/roster").AgentKind }[] | null;
 };
 
 export type Step = {

@@ -20,7 +20,7 @@ flow in the terminal and prints every step.
 
 1. Copy `.env.example` to `.env.local`.
 2. **Nemotron:** set `NVIDIA_API_KEY`, then `npm run smoke` to check tool calling. The rail badge switches from `DEMO` to `NIM`.
-3. **Supabase:** set the URL plus the anon and service-role keys, and run `supabase/migrations/001`–`005` in order in the SQL editor.
+3. **Supabase:** set the URL plus the anon and service-role keys, and run `supabase/migrations/001`–`006` in order in the SQL editor.
 4. Restart `npm run dev`.
 
 If Nemotron errors mid-run, that agent falls back to the scripted policy (same tools, same data) unless it has
@@ -30,17 +30,18 @@ already drafted something. Set `OPSCREW_MODE=scripted` to force the fallback on 
 
 | Page | What |
 |---|---|
-| `/` | Incident console: scenarios, sweep, live crew graph, lane timeline, risk, drafts, step log |
+| `/` | Live incident, one step at a time: Signal → Investigate (agent graph; click an agent for details) → Price → Approve → Fixed. `?step=2` opens a step directly |
 | `/approvals` | Queue: edit, approve (executes) or reject every drafted action |
 | `/portfolio` | Sweep scores, each building's dependency chain, tenants and $/hr, work orders sent |
 | `/runs`, `/runs/[id]` | History and step-by-step replay |
 | `/memory` | What past runs learned plus manager notes; the lead reads this first |
-| `/crew` | Agents, what each owns, and their tools |
+| `/crew` | Crew builder: edit any agent's instructions, tools, model and turn limit, switch specialists on/off, add specialists from templates (Energy Watch, Repeat-Failure Check, Second Opinion) |
 
 ## Code map
 
 ```
-src/lib/roster.ts            agents and their tools (UI and server share it)
+src/lib/roster.ts            built-in agents, tool library, models, specialist templates
+src/lib/crew.ts, crewStore.ts  editable crew: defaults + saved agent_configs; snapshot stored per run
 src/lib/scenarios.ts         demo incidents + hints for the scripted mode
 src/lib/agent/run.ts         agent loop: Nemotron tool calling, parallel calls, ask_* delegation, fallback
 src/lib/agent/tools.ts       every tool, with argument validation

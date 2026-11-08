@@ -25,7 +25,7 @@ export default function Memory() {
 
   return (
     <>
-      <PageHeader title="Building memory" sub="What the crew learned on past runs, plus notes from managers. The lead agent reads this at the start of every run, so the same failure is recognized faster next time." />
+      <PageHeader title="Building memory" sub="What the agents remember about each building. Read at the start of every run." />
       <div className="grid2">
         <section className="card">
           <div className="ch"><h2>Notes</h2><span className="n">{data?.memory.length ?? 0}</span></div>

@@ -14,7 +14,7 @@ const KIND: Record<Approval["kind"], { icon: IconName; label: string }> = {
 };
 
 /** The one thing the manager has to do: see the money, approve the fix. */
-export default function Decision({ risk, approvals, running, onChange }: { risk: Risk | null; approvals: Approval[]; running: boolean; onChange: () => void }) {
+export default function Decision({ risk, approvals, running, onChange, bare }: { risk: Risk | null; approvals: Approval[]; running: boolean; onChange: () => void; bare?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -32,9 +32,9 @@ export default function Decision({ risk, approvals, running, onChange }: { risk:
   }
 
   return (
-    <section className={`card rise ${s.card} ${pending.length ? s.waiting : done && sent.length ? s.fixed : ""}`}>
+    <section className={bare ? s.bare : `card rise ${s.card} ${pending.length ? s.waiting : done && sent.length ? s.fixed : ""}`}>
       <div className="ch">
-        <h2>{done ? (sent.length ? "Fixed before it failed" : "Decision recorded") : "Your decision"}</h2>
+        <h2>{done ? (sent.length ? "All decided" : "Decision recorded") : pending.length ? `${pending.length} actions need your OK` : "The fix"}</h2>
         {risk && <span className="right"><span className={`tag ${risk.urgency === "act today" ? "err" : risk.urgency === "act this week" ? "warn" : ""}`}>{risk.urgency.toUpperCase()}</span></span>}
       </div>
 
@@ -55,13 +55,13 @@ export default function Decision({ risk, approvals, running, onChange }: { risk:
             <span className={s.formula}>{risk.formula}</span>
           </p>
         </div>
-      ) : (
-        <p className="empty">{running ? "The agents are still investigating. The cost of waiting vs fixing shows up here." : "This run was not priced."}</p>
+      ) : bare ? null : (
+        <p className="empty">{running ? "Still investigating." : "Not priced."}</p>
       )}
 
       {approvals.length > 0 && (
         <div className={s.actions}>
-          <span className="label">{done ? "What happened" : `The fix, drafted by the agents (${approvals.length})`}</span>
+          <span className="label">Drafted by the agents · click one to edit</span>
           {approvals.map((a) => {
             const k = KIND[a.kind];
             const p = a.payload as Record<string, unknown>;
@@ -86,11 +86,11 @@ export default function Decision({ risk, approvals, running, onChange }: { risk:
           <button type="button" className="btn accent" disabled={busy} onClick={() => { void approveAll(); }}>
             <Icon name="check" size={15} />{busy ? "Sending…" : `Approve all ${pending.length} and send`}
           </button>
-          <span className="muted" style={{ fontSize: 12.5 }}>or click an item to edit or reject it</span>
           {err && <span className="c-err">{err}</span>}
         </div>
       )}
-      {done && sent.length > 0 && wo?.status === "sent" && (
+      {!approvals.length && <p className="empty">{running ? "Dispatch drafts the fix here. Nothing is sent without you." : "No actions drafted for this run."}</p>}
+      {!bare && done && sent.length > 0 && wo?.status === "sent" && (
         <p className={s.done}><Icon name="badge" size={15} /> {String((wo.payload as Record<string, unknown>).vendor_name)} is booked for {when(String((wo.payload as Record<string, unknown>).scheduled_for ?? ""))}. Saved to building memory.</p>
       )}
     </section>

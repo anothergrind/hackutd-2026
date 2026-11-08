@@ -1,7 +1,7 @@
 // Scripted policy: plays each agent's part without an API key, calling the SAME tools against the SAME data.
 // It exists so the demo never depends on rate limits or Wi-Fi. Live Nemotron uses prompts.ts instead.
 
-import type { AgentId } from "@/lib/roster";
+import type { AgentConfig } from "@/lib/crew";
 import type { RunCtx } from "./tools";
 
 export type Call = { name: string; args: Record<string, unknown> };
@@ -10,8 +10,59 @@ export type Move = { thought?: string; calls: Call[] } | { final: string };
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const hrs = (h: number | null | undefined) => (h == null ? "unknown time" : h < 48 ? `~${Math.round(h)} h` : `~${Math.round(h / 24)} days`);
 
-export function scriptedMove(agent: AgentId, turn: number, ctx: RunCtx): Move {
+const BUILTIN_TASK: Record<string, (ctx: RunCtx) => string> = {
+  triage: (c) => `Find open tickets related to ${c.signal.asset_id} and link any that share a root cause.`,
+  sensor: (c) => `Map dependencies of ${c.hints.root}${c.hints.trend ? ` and estimate hours until ${c.hints.trend.asset_id} ${c.hints.trend.metric} crosses ${c.hints.trend.limit}` : ""}.`,
+  lease: (c) => `Which tenants are hurt if ${c.hints.price_asset} is out for ${c.hints.outage_hours} h, and what is the forecast?`,
+};
+
+/** Reasonable arguments for any read-only tool, so a custom specialist can run without an API key. */
+function defaultArgs(tool: string, ctx: RunCtx): Record<string, unknown> | null {
+  const h = ctx.hints;
+  switch (tool) {
+    case "search_tickets": return { days: 30 };
+    case "past_incidents": return { asset_id: h.price_asset };
+    case "get_dependencies": case "get_weather": case "find_vendor": case "check_parts": return { asset_id: h.root };
+    case "get_readings": return { asset_id: ctx.signal.asset_id, days: 14 };
+    case "detect_trend": return h.trend ? { ...h.trend } : null;
+    case "get_energy": return {};
+    case "tenants_at_risk": return { asset_id: h.price_asset, outage_hours: h.outage_hours };
+    default: return null; // writes and linking need real reasoning
+  }
+}
+
+function genericMove(cfg: AgentConfig, turn: number, ctx: RunCtx, available: string[]): Move {
+  if (turn === 0) {
+    const calls = available.map((name) => ({ name, args: defaultArgs(name, ctx) })).filter((c): c is Call => c.args !== null);
+    if (calls.length) return { thought: `Checking ${calls.map((c) => c.name).join(", ")}.`, calls };
+  }
+  const got = ctx.facts.byAgent?.[cfg.id] ?? [];
+  const bits = got.map((g) => brief(g.name, g.result)).filter(Boolean);
+  return { final: bits.length ? `${cfg.name}: ${bits.join("; ")}.` : `${cfg.name}: nothing to report for this signal.` };
+}
+
+/** One clause per tool result for generic reports. */
+function brief(name: string, r: unknown): string {
+  const x = (r ?? {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (x.error) return `${name} failed (${String(x.error).slice(0, 60)})`;
+  switch (name) {
+    case "get_energy": { const top = x.readings?.[0]; return top ? `${top.equipment} is ${top.over_baseline_pct}% over baseline (anomaly ${top.anomaly_score})` : "no energy anomalies"; }
+    case "past_incidents": return x.repeat ? `repeat failure: ${x.work_orders.length} earlier work order(s), latest "${x.work_orders[0].title}" ${x.work_orders[0].days_ago} days ago` : `no earlier work orders on ${(x.checked ?? []).join(", ")}`;
+    case "detect_trend": return `trend ${x.slope_per_day}/day, ${x.hours_to_limit == null ? "no crossing" : `limit in ~${Math.round(x.hours_to_limit)} h`} (r² ${x.r2})`;
+    case "tenants_at_risk": return `${x.tenants?.length ?? 0} tenants, ${usd(x.penalty_per_hour_usd ?? 0)}/hr`;
+    case "get_dependencies": return `${x.feeds?.length ?? 0} assets downstream`;
+    case "get_readings": return `${x.count ?? 0} recent readings`;
+    case "search_tickets": return `${x.count ?? 0} open tickets`;
+    case "get_weather": return x.summary?.max_f != null ? `forecast high ${Math.round(x.summary.max_f)}°F` : "forecast checked";
+    case "find_vendor": return x.vendors?.[0] ? `${x.vendors[0].name} available` : "no vendor";
+    case "check_parts": return `${(x.parts ?? []).length} parts listed`;
+    default: return "";
+  }
+}
+
+export function scriptedMove(cfg: AgentConfig, turn: number, ctx: RunCtx, available: string[]): Move {
   const { hints: h, facts: f } = ctx;
+  const agent = cfg.builtin ? cfg.id : "custom";
   switch (agent) {
     case "triage": {
       if (turn === 0) return { thought: "Pulling every open ticket in the building from the last 30 days.", calls: [{ name: "search_tickets", args: { days: 30 } }] };
@@ -71,13 +122,10 @@ export function scriptedMove(agent: AgentId, turn: number, ctx: RunCtx): Move {
     case "lead": {
       if (turn === 0) return { thought: `New signal on ${ctx.signal.asset_id}. Checking what we already know about this building.`, calls: [{ name: "read_building_memory", args: {} }] };
       if (turn === 1) {
+        const checkers = ctx.crew.filter((a) => a.kind === "specialist" && a.enabled);
         return {
-          thought: "Running three checks at the same time.",
-          calls: [
-            { name: "ask_triage", args: { task: `Find open tickets related to ${ctx.signal.asset_id} and link any that share a root cause.` } },
-            { name: "ask_sensor", args: { task: `Map dependencies of ${h.root}${h.trend ? ` and estimate hours until ${h.trend.asset_id} ${h.trend.metric} crosses ${h.trend.limit}` : ""}.` } },
-            { name: "ask_lease", args: { task: `Which tenants are hurt if ${h.price_asset} is out for ${h.outage_hours} h, and what is the forecast?` } },
-          ],
+          thought: `Running ${checkers.length} check${checkers.length === 1 ? "" : "s"} at the same time.`,
+          calls: checkers.map((a) => ({ name: `ask_${a.id}`, args: { task: BUILTIN_TASK[a.id]?.(ctx) ?? `${a.role.replace(/[.?!]+$/, "")}. The signal is on ${ctx.signal.asset_id}; the likely root is ${h.root}.` } })),
         };
       }
       if (turn === 2) {
@@ -85,6 +133,7 @@ export function scriptedMove(agent: AgentId, turn: number, ctx: RunCtx): Move {
         return { thought: "Pricing the cost of waiting against fixing now.", calls: [{ name: "price_risk", args: { asset_id: h.price_asset, outage_hours: h.outage_hours, hours_until_failure: f.trend?.hours_to_limit ?? null, repair_cost_usd: repair } }] };
       }
       if (turn === 3) {
+        if (!available.includes("ask_dispatch")) return { calls: [] };
         return { thought: "Worth fixing now. Handing the fix to Dispatch.", calls: [{ name: "ask_dispatch", args: { task: `Fix ${h.root} before it fails. Protects ${usd(f.risk?.wait_usd ?? 0)}. Draft the work order, any schedule change, and notices for affected tenants.` } }] };
       }
       if (turn === 4) {
@@ -100,5 +149,7 @@ export function scriptedMove(agent: AgentId, turn: number, ctx: RunCtx): Move {
         ].filter(Boolean).join(" "),
       };
     }
+    default:
+      return genericMove(cfg, turn, ctx, available);
   }
 }

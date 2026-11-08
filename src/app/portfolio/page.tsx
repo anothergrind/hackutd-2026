@@ -34,7 +34,7 @@ export default function Portfolio() {
     <>
       <PageHeader
         title="Portfolio"
-        sub="Every building, its systems as a dependency chain, and who pays when each one fails. The nightly sweep scores them so the crew starts where it matters."
+        sub="Risk score per building, its systems, and who pays when they fail."
         actions={<button type="button" className="btn" disabled={busy} onClick={() => { void score(); }}><Icon name="gauge" size={15} />{busy ? "Scoring…" : "Score buildings"}</button>}
       />
       {error && <p className="c-err">{error}</p>}
