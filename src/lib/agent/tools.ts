@@ -18,6 +18,7 @@ export type Facts = {
   tenants?: { id: string; name: string; asset_id: string; sla_penalty_per_hour: number; exposure_usd: number }[];
   penaltyPerHour?: number;
   weather?: { max_f: number | null; rain_pct: number | null; gust_mph: number | null };
+  alerts?: string[];
   payer?: { party: "tenant" | "landlord"; name: string; ref: string; text: string };
   vendors?: { id: string; name: string; est_cost_usd: number; next_available: string }[];
   parts?: { part: string; on_hand: number; unit_cost: number; lead_days: number }[];
@@ -277,6 +278,39 @@ export const leaseTools: Record<string, Tool> = {
       const max = (xs?: number[]) => (xs?.length ? Math.max(...xs) : null);
       ctx.facts.weather = { max_f: max(data.daily?.temperature_2m_max), rain_pct: max(data.daily?.precipitation_probability_max), gust_mph: max(data.daily?.wind_gusts_10m_max) };
       return { property: p.name, current: data.current, daily: data.daily, summary: ctx.facts.weather };
+    },
+  },
+  get_weather_alerts: {
+    spec: fn(
+      "get_weather_alerts",
+      "Active National Weather Service watches, warnings and advisories at the asset's property (heat advisories, severe storms, floods).",
+      assetProp,
+      ["asset_id"],
+    ),
+    async run(args, ctx) {
+      const { properties: p } = await getAsset(ctx.db, str(args, "asset_id", 50));
+      if (p.lat == null || p.lon == null) return { error: "Property has no coordinates" };
+
+      // NWS is free and needs no key, but it only covers the US and rejects requests without a User-Agent.
+      const url = `https://api.weather.gov/alerts/active?point=${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+      const response = await fetch(url, {
+        headers: { "User-Agent": "OpsCrew (HackUTD demo)", Accept: "application/geo+json" },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!response.ok) throw new Error(`NWS alerts ${response.status}`);
+
+      // Each GeoJSON feature is one alert; keep the first 5 and only the fields the agent needs.
+      const data = await response.json();
+      const features: { properties: Record<string, string | null> }[] = data.features ?? [];
+      const alerts = features.slice(0, 5).map(({ properties: a }) => ({
+        event: a.event,
+        severity: a.severity,
+        headline: a.headline,
+        ends: a.ends ?? a.expires,
+      }));
+
+      ctx.facts.alerts = alerts.map((a) => String(a.event));
+      return { property: p.name, count: alerts.length, alerts };
     },
   },
 };

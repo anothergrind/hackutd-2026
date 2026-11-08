@@ -22,7 +22,7 @@ function defaultArgs(tool: string, ctx: RunCtx): Record<string, unknown> | null 
   switch (tool) {
     case "search_tickets": return { days: 30 };
     case "past_incidents": return { asset_id: h.price_asset };
-    case "get_dependencies": case "get_weather": case "find_vendor": case "check_parts": return { asset_id: h.root };
+    case "get_dependencies": case "get_weather": case "get_weather_alerts": case "find_vendor": case "check_parts": return { asset_id: h.root };
     case "get_readings": return { asset_id: ctx.signal.asset_id, days: 14 };
     case "detect_trend": return h.trend ? { ...h.trend } : null;
     case "get_energy": return {};
@@ -54,6 +54,7 @@ function brief(name: string, r: unknown): string {
     case "get_readings": return `${x.count ?? 0} recent readings`;
     case "search_tickets": return `${x.count ?? 0} open tickets`;
     case "get_weather": return x.summary?.max_f != null ? `forecast high ${Math.round(x.summary.max_f)}°F` : "forecast checked";
+    case "get_weather_alerts": return x.count ? `NWS: ${x.alerts.map((a: { event: string }) => a.event).join(", ")}` : "no active weather alerts";
     case "find_vendor": return x.vendors?.[0] ? `${x.vendors[0].name} available` : "no vendor";
     case "check_parts": return `${(x.parts ?? []).length} parts listed`;
     default: return "";
@@ -89,11 +90,11 @@ export function scriptedMove(cfg: AgentConfig, turn: number, ctx: RunCtx, availa
     }
     case "lease": {
       if (turn === 0) return { thought: `Finding tenants downstream of ${h.price_asset}.`, calls: [{ name: "tenants_at_risk", args: { asset_id: h.price_asset, outage_hours: h.outage_hours } }] };
-      if (turn === 1) return { thought: `Reading the leases to see who pays for ${h.root}, and checking the forecast.`, calls: [{ name: "lease_responsibility", args: { asset_id: h.root } }, { name: "get_weather", args: { asset_id: h.root } }] };
+      if (turn === 1) return { thought: `Reading the leases to see who pays for ${h.root}, and checking the forecast.`, calls: [{ name: "lease_responsibility", args: { asset_id: h.root } }, { name: "get_weather", args: { asset_id: h.root } }, { name: "get_weather_alerts", args: { asset_id: h.root } }] };
       const ts = f.tenants ?? [];
       const w = f.weather;
       const pay = f.payer ? ` Repair is paid by ${f.payer.name} (${f.payer.ref}).` : "";
-      return { final: `${ts.length} tenant${ts.length === 1 ? "" : "s"} exposed (${ts.map((t) => t.name).join(", ") || "none"}), ${usd(f.penaltyPerHour ?? 0)}/hr in SLA penalties combined.${w?.max_f != null ? ` Forecast high ${Math.round(w.max_f)}°F, rain ${w.rain_pct ?? 0}%, gusts ${Math.round(w.gust_mph ?? 0)} mph.` : ""}${pay}` };
+      return { final: `${ts.length} tenant${ts.length === 1 ? "" : "s"} exposed (${ts.map((t) => t.name).join(", ") || "none"}), ${usd(f.penaltyPerHour ?? 0)}/hr in SLA penalties combined.${w?.max_f != null ? ` Forecast high ${Math.round(w.max_f)}°F, rain ${w.rain_pct ?? 0}%, gusts ${Math.round(w.gust_mph ?? 0)} mph.` : ""}${f.alerts?.length ? ` Active NWS alerts: ${f.alerts.join(", ")}.` : ""}${pay}` };
     }
     case "dispatch": {
       if (turn === 0) return { thought: `Looking up certified vendors and spare parts for ${h.root}.`, calls: [{ name: "find_vendor", args: { asset_id: h.root, est_hours: h.repair_hours } }, { name: "check_parts", args: { asset_id: h.root } }] };
