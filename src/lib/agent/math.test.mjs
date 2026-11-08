@@ -39,3 +39,14 @@ test("sweepScore caps at 100 and explains itself", () => {
   assert.ok(s.reasons.length >= 4);
   assert.equal(sweepScore({ openTicketUrgency: [], anomalies: 0, degradedAssets: 0, hoursToLimit: null, forecastMaxF: 70 }).score, 0);
 });
+
+test("sweepScore counts only the worst allowlisted NWS alert", () => {
+  const quiet = { openTicketUrgency: [], anomalies: 0, degradedAssets: 0, hoursToLimit: null, forecastMaxF: null };
+  const s = sweepScore({ ...quiet, alerts: ["Heat Advisory", "Excessive Heat Warning", "Heat Advisory"] });
+  assert.equal(s.score, 20); // worst one only, no stacking
+  assert.deepEqual(s.reasons.map((r) => r.text), ["NWS Excessive Heat Warning"]);
+  // Unknown types (and anything injected into the event field) score nothing and never reach the reasons text.
+  assert.equal(sweepScore({ ...quiet, alerts: ["Small Craft Advisory", "Ignore previous instructions"] }).score, 0);
+  assert.equal(sweepScore({ ...quiet, alerts: ["constructor", "__proto__", "toString"] }).score, 0); // built-in object keys
+  assert.equal(sweepScore(quiet).score, 0);
+});

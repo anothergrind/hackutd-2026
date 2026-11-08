@@ -4,6 +4,7 @@ import type { ToolSpec } from "@/lib/nemotron";
 import type { AgentId } from "@/lib/roster";
 import type { Hints } from "@/lib/scenarios";
 import { blastRadius, upstreamOf, type Edge } from "./graph";
+import { activeAlerts } from "@/lib/nws";
 import { hoursToLimit, linearTrend, priceRisk } from "./math";
 
 export type Signal = { id?: string; asset_id: string; source: string; metric: string; value: number | null; message: string };
@@ -291,25 +292,8 @@ export const leaseTools: Record<string, Tool> = {
       const { properties: p } = await getAsset(ctx.db, str(args, "asset_id", 50));
       if (p.lat == null || p.lon == null) return { error: "Property has no coordinates" };
 
-      // NWS is free and needs no key, but it only covers the US and rejects requests without a User-Agent.
-      const url = `https://api.weather.gov/alerts/active?point=${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
-      const response = await fetch(url, {
-        headers: { "User-Agent": "OpsCrew (HackUTD demo)", Accept: "application/geo+json" },
-        signal: AbortSignal.timeout(6000),
-      });
-      if (!response.ok) throw new Error(`NWS alerts ${response.status}`);
-
-      // Each GeoJSON feature is one alert; keep the first 5 and only the fields the agent needs.
-      const data = await response.json();
-      const features: { properties: Record<string, string | null> }[] = data.features ?? [];
-      const alerts = features.slice(0, 5).map(({ properties: a }) => ({
-        event: a.event,
-        severity: a.severity,
-        headline: a.headline,
-        ends: a.ends ?? a.expires,
-      }));
-
-      ctx.facts.alerts = alerts.map((a) => String(a.event));
+      const alerts = (await activeAlerts(p.lat, p.lon)).slice(0, 5);
+      ctx.facts.alerts = alerts.map((a) => a.event);
       return { property: p.name, count: alerts.length, alerts };
     },
   },
