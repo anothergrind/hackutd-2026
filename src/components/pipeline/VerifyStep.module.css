@@ -1,0 +1,16 @@
+.wrap { display: flex; flex-direction: column; gap: 10px; }
+.lead { display: flex; align-items: center; gap: 8px; font-size: 15.5px; color: var(--ink); }
+.ok { color: var(--ok); font-weight: 600; }
+.no { color: var(--err); font-weight: 600; }
+.btns { display: flex; gap: 8px; }
+.small { font-size: 13px; color: var(--ink-3); }
+.chart { width: 100%; max-width: 460px; height: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.limit { stroke: var(--err); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: .7; }
+.repair { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 3; }
+.lbl { font-size: 11px; fill: var(--ink-3); font-family: var(--sans); }
+.before { fill: none; stroke: var(--ink-3); stroke-width: 2; }
+.good { fill: none; stroke: var(--ok); stroke-width: 2.2; }
+.bad { fill: none; stroke: var(--err); stroke-width: 2.2; }
+.dBefore { fill: var(--ink-3); }
+.dGood { fill: var(--ok); }
+.dBad { fill: var(--err); }

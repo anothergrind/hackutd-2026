@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Approval } from "@/lib/types";
+import { scheduleVerification } from "@/lib/verify";
 
 // Fields a manager may edit before approving. Everything else in the payload stays as the agent drafted it.
 const EDITABLE: Record<Approval["kind"], string[]> = {
@@ -56,6 +57,8 @@ export async function decide(db: SupabaseClient, id: string, d: Decision) {
       await db.from("approvals").update({ status: "pending", decided_by: null, decided_at: null }).eq("id", id);
       throw new Error(res.error.message);
     }
+    // A booked repair gets a follow-up check that the problem is really gone.
+    if (a.kind === "work_order") await scheduleVerification(db, a.run_id).catch((e) => console.error("verify schedule failed", e));
   }
 
   // Close the run once nothing is left waiting.

@@ -18,6 +18,7 @@ export type Facts = {
   tenants?: { id: string; name: string; asset_id: string; sla_penalty_per_hour: number; exposure_usd: number }[];
   penaltyPerHour?: number;
   weather?: { max_f: number | null; rain_pct: number | null; gust_mph: number | null };
+  payer?: { party: "tenant" | "landlord"; name: string; ref: string; text: string };
   vendors?: { id: string; name: string; est_cost_usd: number; next_available: string }[];
   parts?: { part: string; on_hand: number; unit_cost: number; lead_days: number }[];
   risk?: ReturnType<typeof priceRisk> & { asset_id: string; outage_hours: number; penalty_per_hour: number };
@@ -228,6 +229,31 @@ export const sensorTools: Record<string, Tool> = {
 // ---------------- Lease / SLA ----------------
 
 export const leaseTools: Record<string, Tool> = {
+  lease_responsibility: {
+    spec: fn("lease_responsibility", "Reads the leases of tenants served by an asset and says who must pay to repair it (landlord or a tenant), quoting the clause.", assetProp, ["asset_id"]),
+    async run(args, ctx) {
+      const asset = await getAsset(ctx.db, str(args, "asset_id", 50));
+      const { tenants } = await tenantsDownstream(ctx.db, asset.id, 1);
+      const leases = tenants.length
+        ? (must(await ctx.db.from("leases").select("tenant_id, lease_ref, clauses").in("tenant_id", tenants.map((t) => t.id))) as { tenant_id: string; lease_ref: string; clauses: { assets?: string[]; kinds?: string[]; party: "tenant" | "landlord"; ref: string; text: string }[] }[])
+        : [];
+      // An asset-specific clause beats a general one; a tenant-pays clause names that tenant as payer.
+      const matches = leases.flatMap((l) => {
+        const t = tenants.find((x) => x.id === l.tenant_id)!;
+        const exact = l.clauses.find((c) => c.assets?.includes(asset.id));
+        const general = l.clauses.find((c) => c.kinds?.includes(asset.kind));
+        const c = exact ?? general;
+        return c ? [{ tenant: t.name, lease_ref: l.lease_ref, specific: Boolean(exact), ...c }] : [];
+      });
+      const tenantPays = matches.find((m) => m.party === "tenant" && m.specific) ?? matches.find((m) => m.party === "tenant");
+      const pick = tenantPays ?? matches.find((m) => m.specific) ?? matches[0];
+      const payer = pick
+        ? { party: pick.party, name: pick.party === "tenant" ? pick.tenant : "Landlord", ref: `${pick.lease_ref} ${pick.ref}`, text: pick.text }
+        : { party: "landlord" as const, name: "Landlord", ref: "no lease clause", text: "No tenant lease covers this equipment, so it is a base-building cost." };
+      ctx.facts.payer = payer;
+      return { asset_id: asset.id, asset_kind: asset.kind, payer, clauses_checked: matches.map((m) => ({ tenant: m.tenant, ref: m.ref, party: m.party })) };
+    },
+  },
   tenants_at_risk: {
     spec: fn("tenants_at_risk", "Tenants downstream of an asset and their SLA exposure for an outage.", { ...assetProp, outage_hours: { type: "number", description: "1-72" } }, ["asset_id", "outage_hours"]),
     async run(args, ctx) {

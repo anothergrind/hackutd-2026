@@ -13,7 +13,7 @@ export default function Runs() {
   const { data, error } = usePoll<{ runs: Row[] }>("/api/runs", 4000);
   return (
     <>
-      <PageHeader title="Run history" sub="Every run. Click one to replay it." />
+      <PageHeader title="Run History" sub="Every run. Click one to replay it." />
       <section className="card">
         {error && <p className="empty c-err">{error}</p>}
         {data && !data.runs.length && <p className="empty">No runs yet.</p>}

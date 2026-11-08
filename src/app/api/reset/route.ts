@@ -9,6 +9,9 @@ export const POST = handle(async () => {
   const { data: runs } = await db.from("agent_runs").select("event_id");
   const eventIds = (runs ?? []).map((r) => r.event_id).filter(Boolean);
   const nil = "00000000-0000-0000-0000-000000000000";
+  await db.from("verifications").delete().neq("id", nil);
+  await db.from("triage_plans").delete().neq("id", nil);
+  await db.from("telemetry_events").delete().like("message", "After repair%");
   await db.from("schedule_changes").delete().neq("id", nil);
   await db.from("work_orders").delete().not("run_id", "is", null); // keep seeded history
   await db.from("tenant_notices").delete().neq("id", nil);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/http";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { checkVerification } from "@/lib/verify";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +16,7 @@ export const GET = handle(async (_request: Request, { params }: { params: Promis
   ]);
   if (run.error) return NextResponse.json({ error: run.error.message }, { status: 404 });
   if (steps.error) throw new Error(steps.error.message);
-  return NextResponse.json({ run: run.data, steps: steps.data, approvals: approvals.data ?? [] });
+  // Runs the after-repair check when it comes due; table may be missing before migration 007.
+  const verification = await checkVerification(db, id).catch(() => null);
+  return NextResponse.json({ run: run.data, steps: steps.data, approvals: approvals.data ?? [], verification });
 });

@@ -32,7 +32,7 @@ export default function Crew() {
   const add = (template_id: string) => act(async () => { const r = await api<{ agent: AgentConfig }>("/api/crew", { method: "POST", json: { template_id } }); setSel(r.agent.id); }, "Added. Edit it, then run an incident.");
   const remove = () => current && act(async () => { await api(`/api/crew/${current.id}`, { method: "DELETE" }); if (!current.builtin) setSel("lead"); }, current.builtin ? "Reset to default" : "Deleted");
 
-  if (!data || !draft || !current) return <PageHeader title="The agents" />;
+  if (!data || !draft || !current) return <PageHeader title="The Agents" />;
   const lead = data.crew.find((a) => a.kind === "lead")!;
   const specs = data.crew.filter((a) => a.kind === "specialist");
   const disp = data.crew.find((a) => a.kind === "dispatch");
@@ -40,10 +40,10 @@ export default function Crew() {
 
   return (
     <>
-      <PageHeader title="The agents" sub="Pick an agent to change what it does. Add specialists from templates." />
+      <PageHeader title="The Agents" sub="Pick an agent to change what it does. Add specialists from templates." />
       <div className={s.builder}>
         <aside className={`card ${s.palette}`}>
-          <div className="ch"><h2>Add a specialist</h2></div>
+          <div className="ch"><h2>Add a Specialist</h2></div>
           {data.templates.map((t) => (
             <button key={t.id} type="button" className={s.tpl} disabled={busy} onClick={() => { void add(t.id); }}>
               <span className={s.tico}><Icon name={ICON[t.icon]} size={15} /></span>

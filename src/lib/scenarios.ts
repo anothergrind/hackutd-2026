@@ -12,6 +12,8 @@ export type Hints = {
   steps: string[];
   schedule?: string;
   schedule_asset?: string; // asset the schedule change applies to (default: root)
+  /** How to confirm the fix worked afterwards (default: a health reading on the root asset). */
+  verify?: { asset_id: string; metric: string; limit: number; direction: "below" | "above" };
 };
 
 export type Scenario = {
@@ -21,6 +23,8 @@ export type Scenario = {
   property_id: string;
   signal: { asset_id: string; source: "sensor" | "bms" | "cyber" | "ticket" | "weather"; metric: string; value: number | null; message: string };
   hints: Hints;
+  /** Plain-English wording for non-technical viewers. */
+  plain: { reported: string; problem: string };
 };
 
 const DC1 = "00000000-0000-0000-0000-000000000003";
@@ -28,6 +32,7 @@ const DC1 = "00000000-0000-0000-0000-000000000003";
 export const SCENARIOS: Scenario[] = [
   {
     id: "cooling-cascade",
+    plain: { reported: "Staff reported a third small problem in Data hall A: water on the floor, a musty smell and warmer air.", problem: "a cooling unit in Data hall A is leaking, and the main chiller that cools the building is slowly overheating" },
     label: "Cooling cascade",
     blurb: "3 small tickets in Data hall A and a chiller running hot",
     property_id: DC1,
@@ -40,10 +45,12 @@ export const SCENARIOS: Scenario[] = [
       steps: ["Replace CRAH-A1 condensate pump (spare on site)", "Check CHILLER-1 refrigerant charge and compressor bearings", "Verify hall A rack inlet temps under 78F after repair"],
       schedule: "Pre-cool Data hall A to 68F supply tonight and shift batch load to hall B until the repair is verified",
       schedule_asset: "HALL-A",
+      verify: { asset_id: "CHILLER-1", metric: "supply_temp_f", limit: 50, direction: "below" },
     },
   },
   {
     id: "bms-intrusion",
+    plain: { reported: "Someone from an unknown computer is changing the cooling settings.", problem: "the building control system may be hacked and could let the data halls overheat" },
     label: "BMS intrusion",
     blurb: "Unknown IP rewriting cooling setpoints",
     property_id: DC1,
@@ -58,6 +65,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: "utility-sag",
+    plain: { reported: "The main power line keeps dipping, and storms are forecast tonight.", problem: "a weak power line during storms could push the site onto a backup generator and an aging battery" },
     label: "Utility sag + storms",
     blurb: "Feed A voltage dropping with storms in the forecast",
     property_id: DC1,
@@ -72,6 +80,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: "office-ahu",
+    plain: { reported: "Water was found under an air handler on Floor 4 for the third time today.", problem: "an air handler on Floor 4 is leaking, and its drain pan was only patched last year" },
     label: "Office AHU leak",
     blurb: "Condensation under AHU-04 at Avon Center",
     property_id: "00000000-0000-0000-0000-000000000001",
@@ -83,7 +92,23 @@ export const SCENARIOS: Scenario[] = [
       steps: ["Replace AHU-04 drain pan (order, 3-day lead)", "Clear condensate line and dry ceiling void", "Moisture-check Floor 5 ceiling below"],
     },
   },
+  {
+    id: "northstar-panel",
+    label: "Northstar panel",
+    blurb: "Lights flickering, panel 12B running hot",
+    plain: { reported: "Floor 12 tenants report flickering lights again, and the electrical panel feels hot.", problem: "an electrical panel on Floor 12 is overheating and could cut power to the whole floor" },
+    property_id: "00000000-0000-0000-0000-000000000002",
+    signal: { asset_id: "PANEL-12B", source: "sensor", metric: "panel_temp_f", value: 131, message: "Panel 12B surface temperature 131F (normal under 100F); flicker reports from Floor 12 west." },
+    hints: {
+      root: "PANEL-12B", impacted: "FLOOR-12", price_asset: "PANEL-12B",
+      problem: "Loose or overloaded breaker in PANEL-12B overheating; Floor 12 power and HVAC at risk",
+      outage_hours: 6, repair_hours: 3,
+      steps: ["Thermal scan PANEL-12B and torque all terminations", "Replace the failing breaker", "Rebalance Floor 12 west circuits"],
+      schedule: "Shed non-essential Floor 12 west lighting load until the panel is repaired",
+    },
+  },
 ];
 
 export const scenarioById = (id: string) => SCENARIOS.find((s) => s.id === id);
+export const scenarioByLabel = (label: string | null | undefined) => SCENARIOS.find((s) => s.label === label);
 export const scenarioForProperty = (propertyId: string) => SCENARIOS.find((s) => s.property_id === propertyId);

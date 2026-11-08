@@ -6,7 +6,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   const { id } = await params;
   return (
     <>
-      <PageHeader title="Run replay" crumbs={<><Link href="/runs">Run history</Link><span>/</span><span>{id.slice(0, 8)}</span></>} />
+      <PageHeader title="Run Replay" crumbs={<><Link href="/runs">Run History</Link><span>/</span><span>{id.slice(0, 8)}</span></>} />
       <RunView runId={id} />
     </>
   );

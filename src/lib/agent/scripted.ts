@@ -89,10 +89,11 @@ export function scriptedMove(cfg: AgentConfig, turn: number, ctx: RunCtx, availa
     }
     case "lease": {
       if (turn === 0) return { thought: `Finding tenants downstream of ${h.price_asset}.`, calls: [{ name: "tenants_at_risk", args: { asset_id: h.price_asset, outage_hours: h.outage_hours } }] };
-      if (turn === 1) return { thought: "Checking the forecast; heat raises cooling load and storms threaten power.", calls: [{ name: "get_weather", args: { asset_id: h.root } }] };
+      if (turn === 1) return { thought: `Reading the leases to see who pays for ${h.root}, and checking the forecast.`, calls: [{ name: "lease_responsibility", args: { asset_id: h.root } }, { name: "get_weather", args: { asset_id: h.root } }] };
       const ts = f.tenants ?? [];
       const w = f.weather;
-      return { final: `${ts.length} tenant${ts.length === 1 ? "" : "s"} exposed (${ts.map((t) => t.name).join(", ") || "none"}), ${usd(f.penaltyPerHour ?? 0)}/hr in SLA penalties combined.${w?.max_f != null ? ` Forecast high ${Math.round(w.max_f)}°F, rain ${w.rain_pct ?? 0}%, gusts ${Math.round(w.gust_mph ?? 0)} mph.` : ""}` };
+      const pay = f.payer ? ` Repair is paid by ${f.payer.name} (${f.payer.ref}).` : "";
+      return { final: `${ts.length} tenant${ts.length === 1 ? "" : "s"} exposed (${ts.map((t) => t.name).join(", ") || "none"}), ${usd(f.penaltyPerHour ?? 0)}/hr in SLA penalties combined.${w?.max_f != null ? ` Forecast high ${Math.round(w.max_f)}°F, rain ${w.rain_pct ?? 0}%, gusts ${Math.round(w.gust_mph ?? 0)} mph.` : ""}${pay}` };
     }
     case "dispatch": {
       if (turn === 0) return { thought: `Looking up certified vendors and spare parts for ${h.root}.`, calls: [{ name: "find_vendor", args: { asset_id: h.root, est_hours: h.repair_hours } }, { name: "check_parts", args: { asset_id: h.root } }] };
