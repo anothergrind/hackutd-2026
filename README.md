@@ -72,5 +72,14 @@ Each run also says **who pays** for the repair (Lease agent's `lease_responsibil
 
 `npm run dry-run:plan` runs Storm night → plan → apply → fix checks in the terminal. `npm test` runs the graph and math unit tests. `npm run typecheck` checks types.
 
-**If you deploy publicly:** `/api/incidents` and `/api/sweep` spend NVIDIA credits and anyone can call them.
-That's fine for judging; take it down afterwards.
+## Security
+
+- **Site password:** set `SITE_PASSWORD` (and `SITE_USER`, default `opscrew`) before deploying. `src/proxy.ts` then puts
+  every page and API route behind HTTP Basic Auth, so strangers can't spend NVIDIA credits, edit agents or approve
+  actions. Unset, the app is open (local dev). `/api/sweep/cron` is exempt and checks `CRON_SECRET` instead. Only use it over HTTPS.
+- **Human approval for every side effect:** agents only draft. Work orders, schedule changes and tenant notices run only
+  when a person approves them, and edits at approval time can't change the recipient, vendor or amount.
+- **Untrusted input is capped and validated:** tool arguments from the model, manager notes and crew instructions are
+  type-checked and length-limited before use.
+- **Headers:** no framing by other sites, no MIME sniffing, strict referrer policy (`next.config.ts`).
+- The Supabase service-role key is server-only; the browser never sees it.
