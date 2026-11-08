@@ -84,6 +84,41 @@
 .who b { margin-top: 4px; font-size: 19px; font-weight: 700; color: var(--ink); }
 .who em { font-style: normal; font-size: 16px; line-height: 1.45; color: var(--ink-2); }
 
+/* Slide 3: architecture */
+.arch { display: grid; grid-template-columns: 200px 40px minmax(0, 1fr) 40px 200px; width: 100%; margin-top: 36px; }
+.aCol ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.aHead { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.aCard { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); color: var(--accent); }
+.aCard span { display: flex; flex-direction: column; gap: 2px; }
+.aCard b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.aCard em { font-style: normal; font-size: 13px; line-height: 1.35; color: var(--ink-3); }
+.aLink { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--ink-3); }
+.app { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; background: var(--surface); border: 2px solid var(--solid); }
+.crew { display: grid; grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1.1fr) 18px minmax(0, 1fr) 18px minmax(0, 1fr); align-items: center; gap: 4px; margin-top: 4px; }
+.node { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line); color: var(--accent); }
+.node b { font-size: 14px; font-weight: 700; color: var(--ink); }
+.node em { font-style: normal; font-size: 12.5px; line-height: 1.3; color: var(--ink-3); }
+.lead { background: var(--solid); border-color: var(--solid); color: var(--solid-fg); }
+.lead b, .lead em { color: inherit; }
+.par { display: flex; flex-direction: column; gap: 6px; }
+.par .node { flex-direction: row; align-items: center; gap: 8px; padding: 7px 10px; }
+.parTag { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.to { display: grid; place-items: center; color: var(--ink-3); }
+.after { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 14px; border-top: 1px dashed var(--line-2); }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--accent-soft); font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.chip svg { color: var(--accent); }
+.ask { margin-left: auto; background: transparent; border: 1px solid var(--line-2); }
+.archFoot { margin-top: 28px; max-width: 760px; font-size: 16px; line-height: 1.5; color: var(--ink-2); }
+
+/* Slide 6: tracks */
+.tracks { list-style: none; margin: 36px 0 0; padding: 0; width: 100%; border-top: 1px solid var(--line); }
+.tracks li { display: grid; grid-template-columns: 300px minmax(0, 1fr); align-items: center; gap: 28px; padding: 14px 0; border-bottom: 1px solid var(--line); animation: up .5s cubic-bezier(.2, .7, .2, 1) both; }
+.tName { display: flex; align-items: center; gap: 14px; color: var(--accent); }
+.tName > span { display: flex; flex-direction: column; gap: 2px; }
+.tName b { font-size: 19px; font-weight: 700; color: var(--ink); }
+.tName em { font-style: normal; font-size: 13px; color: var(--ink-3); }
+.tracks p { margin: 0; font-size: 16px; line-height: 1.45; color: var(--ink-2); }
+
 /* Navigation: the same dark green circle arrows as Live Incident. */
 .arrow { position: absolute; top: 50%; width: 52px; height: 52px; margin-top: -26px; border-radius: 50%; display: grid; place-items: center; border: 0; background: var(--solid); color: var(--solid-fg); cursor: pointer; transition: background .15s, transform .15s, opacity .15s; }
 .arrow:hover:not(:disabled) { background: color-mix(in srgb, var(--solid) 82%, #000); transform: scale(1.06); }
@@ -97,7 +132,7 @@
 .deck[data-dark] .dots button { background: rgba(255, 255, 255, .25); }
 .deck[data-dark] .dots button[data-on] { background: var(--mint); }
 
-@media (prefers-reduced-motion: reduce) { .slide > *, .signals li, .flow li, .watch li, .who li, .deck { animation: none; } .lines path, .live i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .slide > *, .signals li, .flow li, .watch li, .who li, .tracks li, .deck { animation: none; } .lines path, .live i { animation: none; } }
 @media (max-width: 900px) {
   .stage { padding: 0 20px 90px; }
   .top { padding: 0 16px; }
@@ -107,4 +142,9 @@
   .flow, .watch, .nums, .who { grid-template-columns: 1fr; gap: 18px; }
   .flow li::after { display: none; }
   .nums div + div { padding-left: 0; border-left: 0; }
+  .arch, .crew { grid-template-columns: 1fr; gap: 12px; }
+  .aLink, .to { transform: rotate(90deg); }
+  .aLink { flex-direction: row; }
+  .ask { margin-left: 0; }
+  .tracks li { grid-template-columns: 1fr; gap: 8px; }
 }

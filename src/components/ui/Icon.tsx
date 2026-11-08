@@ -1,12 +1,12 @@
 import {
-  Activity, ArrowLeft, ArrowRight, BadgeCheck, Bird, Bot, Brain, Building2, CalendarClock, Check, CircleSlash, Clock, Gauge, History, Inbox,
+  Activity, ArrowLeft, ArrowRight, BadgeCheck, Bird, Bot, Brain, Building2, CalendarClock, Check, CircleSlash, Clock, Database, Gauge, History, Inbox,
   Mail, Moon, Pencil, Play, Presentation, Plus, Radar, RotateCcw, Scale, Search, ShieldCheck, SlidersHorizontal, Sparkles, Sun, Ticket, Trash2, Truck, Users, Wrench, X, Zap,
   type LucideProps,
 } from "lucide-react";
 
 const icons = {
   activity: Activity, "arrow-left": ArrowLeft, "arrow-right": ArrowRight, badge: BadgeCheck, bird: Bird, bot: Bot, brain: Brain, building: Building2,
-  calendar: CalendarClock, check: Check, slash: CircleSlash, clock: Clock, gauge: Gauge, history: History, inbox: Inbox, mail: Mail,
+  calendar: CalendarClock, check: Check, slash: CircleSlash, clock: Clock, database: Database, gauge: Gauge, history: History, inbox: Inbox, mail: Mail,
   moon: Moon, pencil: Pencil, play: Play, present: Presentation, plus: Plus, radar: Radar, reset: RotateCcw, scale: Scale, search: Search, shield: ShieldCheck,
   sliders: SlidersHorizontal, sparkles: Sparkles, sun: Sun, ticket: Ticket, trash: Trash2, truck: Truck, users: Users, wrench: Wrench, x: X, zap: Zap,
 };

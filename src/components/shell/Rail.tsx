@@ -33,8 +33,8 @@ export default function Rail() {
   const live = Boolean(h?.ok);
   const [presenting, setPresenting] = useState<number | false>(false);
   const [asking, setAsking] = useState(false);
-  // ?present=1-4 opens the deck on that slide.
-  useEffect(() => { const n = Number(new URLSearchParams(location.search).get("present")); if (n >= 1 && n <= 4) setPresenting(n - 1); }, []);
+  // ?present=1-6 opens the deck on that slide.
+  useEffect(() => { const n = Number(new URLSearchParams(location.search).get("present")); if (n >= 1 && n <= 6) setPresenting(n - 1); }, []);
 
   return (
     <nav className="rail" aria-label="Primary">

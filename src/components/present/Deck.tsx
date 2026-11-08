@@ -73,7 +73,62 @@ function Solution() {
   );
 }
 
-/* ---------- Slide 3: demo ---------- */
+/* ---------- Slide 3: architecture ---------- */
+type Box = { icon: IconName; t: string; d: string };
+const Card = ({ icon, t, d }: Box) => <li className={s.aCard}><Icon name={icon} size={18} /><span><b>{t}</b><em>{d}</em></span></li>;
+const To = () => <span className={s.to} aria-hidden><Icon name="arrow-right" size={16} /></span>;
+
+function Architecture() {
+  const inputs: Box[] = [
+    { icon: "ticket", t: "Ticket or alarm", d: "An incident comes in" },
+    { icon: "calendar", t: "Nightly sweep", d: "Vercel Cron scores every building" },
+    { icon: "users", t: "Facility manager", d: "Approves, plans the night, asks" },
+  ];
+  const services: Box[] = [
+    { icon: "brain", t: "NVIDIA Nemotron", d: "On a Brev L40S GPU, hosted API as backup" },
+    { icon: "database", t: "Supabase Postgres", d: "Runs, steps, approvals, memory, leases" },
+    { icon: "radar", t: "Weather alerts", d: "National Weather Service API" },
+  ];
+  const specialists: { icon: IconName; t: string }[] = [
+    { icon: "ticket", t: "Ticket Triage" }, { icon: "activity", t: "Sensor Watch" }, { icon: "scale", t: "Lease / SLA" },
+  ];
+  return (
+    <div className={s.slide}>
+      <span className={s.eyebrow}>Architecture</span>
+      <h1 className={s.h1}>How Canary is built.</h1>
+      <div className={s.arch}>
+        <div className={s.aCol}><span className={s.aHead}>Inputs</span><ul>{inputs.map((x) => <Card key={x.t} {...x} />)}</ul></div>
+        <span className={s.aLink} aria-hidden><Icon name="arrow-right" size={20} /></span>
+        <section className={s.app} aria-label="Canary app">
+          <span className={s.aHead}>Canary · Next.js on Vercel: web pages + API routes</span>
+          <div className={s.crew}>
+            <div className={`${s.node} ${s.lead}`}><Icon name="bot" size={18} /><b>Lead agent</b><em>Reads memory, delegates</em></div>
+            <To />
+            <div className={s.par}>
+              <span className={s.parTag}>In parallel</span>
+              {specialists.map((x) => <div key={x.t} className={s.node}><Icon name={x.icon} size={15} /><b>{x.t}</b></div>)}
+            </div>
+            <To />
+            <div className={s.node}><Icon name="gauge" size={18} /><b>Price the risk</b><em>Wait vs. fix, in code</em></div>
+            <To />
+            <div className={s.node}><Icon name="truck" size={18} /><b>Dispatch</b><em>Drafts the fix</em></div>
+          </div>
+          <div className={s.after}>
+            <span className={s.chip}><Icon name="inbox" size={15} />Approval queue</span><To />
+            <span className={s.chip}><Icon name="check" size={15} />Execute</span><To />
+            <span className={s.chip}><Icon name="badge" size={15} />Verify the fix</span>
+            <span className={`${s.chip} ${s.ask}`}><Icon name="sparkles" size={15} />Ask Canary: Q&amp;A on live data</span>
+          </div>
+        </section>
+        <span className={s.aLink} aria-hidden><Icon name="arrow-right" size={20} /><Icon name="arrow-left" size={20} /></span>
+        <div className={s.aCol}><span className={s.aHead}>Services</span><ul>{services.map((x) => <Card key={x.t} {...x} />)}</ul></div>
+      </div>
+      <p className={s.archFoot}>If the GPU is unreachable, agents switch to NVIDIA&apos;s hosted Nemotron, then to scripted mode. Agents only draft: every action waits for a human.</p>
+    </div>
+  );
+}
+
+/* ---------- Slide 4: demo ---------- */
 function Demo({ onStart }: { onStart: () => void }) {
   const watch = [
     { n: "01", t: "The forecast", d: "When the equipment hits its limit" },
@@ -92,7 +147,7 @@ function Demo({ onStart }: { onStart: () => void }) {
   );
 }
 
-/* ---------- Slide 4: impact ---------- */
+/* ---------- Slide 5: impact ---------- */
 function Impact() {
   const { data } = usePoll<{ runs: Run[] }>("/api/runs", 0, false);
   const priced = (data?.runs ?? []).filter((r) => r.risk);
@@ -120,13 +175,39 @@ function Impact() {
   );
 }
 
-/** Full-screen, four-slide pitch. Arrow keys or the side arrows move between slides; Esc closes. */
+/* ---------- Slide 6: tracks ---------- */
+function Tracks() {
+  const tracks: { icon: IconName; t: string; c?: string; d: string }[] = [
+    { icon: "brain", t: "NVIDIA", c: "Use Nemotron Beyond a Chatbot", d: "Five Nemotron agents plan, call tools in parallel and draft real work. Served from a Brev L40S GPU, with NVIDIA's hosted API as backup." },
+    { icon: "building", t: "CBRE", c: "Predict Before It Spreads", d: "Joins tickets, sensors, leases and weather into one dependency graph, forecasts the failure, prices waiting vs. fixing and drafts the repair." },
+    { icon: "shield", t: "NMC²", c: "Keep the World Running", d: "Keeps data center teams a step ahead: catches the early warning, traces it to the data halls and tenants at risk, and hands off a ready-to-approve fix." },
+    { icon: "badge", t: "UTD General", d: "A working product end to end: signal, agents, approval, then a sensor check that the fix worked. Real data in Supabase, tested math." },
+    { icon: "pencil", t: "Best Design", d: "One decision per screen: Signal → Investigate → Price → Approve → Fixed, a live agent graph, plain-language costs, light and dark themes." },
+  ];
+  return (
+    <div className={s.slide}>
+      <span className={s.eyebrow}>Our Tracks</span>
+      <h1 className={s.h1}>One build, five tracks.</h1>
+      <ul className={s.tracks}>
+        {tracks.map((x, n) => (
+          <li key={x.t} style={{ animationDelay: `${200 + n * 90}ms` }}>
+            <span className={s.tName}><Icon name={x.icon} size={18} /><span><b>{x.t}</b>{x.c && <em>{x.c}</em>}</span></span>
+            <p>{x.d}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Full-screen, six-slide pitch. Arrow keys or the side arrows move between slides; Esc closes. */
 export default function Deck({ onClose, start: first = 0 }: { onClose: () => void; start?: number }) {
   const router = useRouter();
   const [i, setI] = useState(first);
-  const total = 4;
-  const go = useCallback((n: number) => setI(Math.max(0, Math.min(total - 1, n))), []);
   const start = useCallback(() => { onClose(); router.push("/"); }, [onClose, router]);
+  const slides = [<Problem key="p" />, <Solution key="s" />, <Architecture key="a" />, <Demo key="d" onStart={start} />, <Impact key="i" />, <Tracks key="t" />];
+  const total = slides.length;
+  const go = useCallback((n: number) => setI(Math.max(0, Math.min(total - 1, n))), [total]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -137,11 +218,10 @@ export default function Deck({ onClose, start: first = 0 }: { onClose: () => voi
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { removeEventListener("keydown", key); document.body.style.overflow = prev; };
-  }, [onClose]);
+  }, [onClose, total]);
 
-  const slides = [<Problem key="p" />, <Solution key="s" />, <Demo key="d" onStart={start} />, <Impact key="i" />];
   return createPortal(
-    <div className={s.deck} data-dark={i === 2 || undefined} role="dialog" aria-label="Canary presentation">
+    <div className={s.deck} data-dark={slides[i].key === "d" || undefined} role="dialog" aria-label="Canary presentation">
       <header className={s.top}>
         <span className={s.topBrand}><span className={s.markSm}><Logo size={21} /></span>Canary</span>
         <span className={s.count}>{String(i + 1).padStart(2, "0")} <i>/ {String(total).padStart(2, "0")}</i></span>
