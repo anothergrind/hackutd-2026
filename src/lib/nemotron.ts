@@ -11,7 +11,7 @@ export type ToolSpec = {
   function: { name: string; description: string; parameters: Record<string, unknown> };
 };
 
-export const nemotronModel = () => process.env.NEMOTRON_MODEL ?? "nvidia/llama-3.3-nemotron-super-49b-v1.5";
+export const nemotronModel = () => process.env.NEMOTRON_MODEL ?? "nvidia/nemotron-3.5-super-vl-120b-a12b";
 
 /** Live Nemotron unless there is no key or OPSCREW_MODE=scripted. */
 export const agentMode = (): "live" | "scripted" =>
