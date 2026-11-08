@@ -60,7 +60,19 @@ export function priceRisk(input: { penaltyPerHour: number; outageHours: number; 
 }
 
 /** 0-100 building risk score used by the nightly sweep. Each reason carries the points it added. */
-export function sweepScore(signals: { openTicketUrgency: number[]; anomalies: number; degradedAssets: number; hoursToLimit: number | null; forecastMaxF: number | null }) {
+/**
+ * NWS alert types that stress building systems, and the sweep points each adds. It's an allowlist: alert text is
+ * outside data, so unknown types score 0 and only these fixed names ever reach a prompt.
+ */
+export const ALERT_POINTS: Record<string, number> = {
+  "Extreme Heat Warning": 20, "Excessive Heat Warning": 20, "Heat Advisory": 12,
+  "Extreme Heat Watch": 8, "Excessive Heat Watch": 8,
+  "Tornado Warning": 20, "Hurricane Warning": 20, "Tropical Storm Warning": 15,
+  "Severe Thunderstorm Warning": 15, "Ice Storm Warning": 15, "Flash Flood Warning": 15,
+  "Winter Storm Warning": 12, "High Wind Warning": 12, "Flood Warning": 10,
+};
+
+export function sweepScore(signals: { openTicketUrgency: number[]; anomalies: number; degradedAssets: number; hoursToLimit: number | null; forecastMaxF: number | null; alerts?: string[] }) {
   const reasons: { text: string; points: number }[] = [];
   const add = (points: number, text: string) => { if (points > 0) reasons.push({ text, points }); };
   const tickets = signals.openTicketUrgency;
@@ -71,6 +83,9 @@ export function sweepScore(signals: { openTicketUrgency: number[]; anomalies: nu
     add(signals.hoursToLimit <= 24 ? 30 : signals.hoursToLimit <= 72 ? 18 : 6, `trend crosses limit in ~${Math.round(signals.hoursToLimit)} h`);
   }
   if (signals.forecastMaxF != null) add(signals.forecastMaxF >= 95 ? 10 : signals.forecastMaxF >= 88 ? 5 : 0, `forecast high ${Math.round(signals.forecastMaxF)}°F`);
+  // Only the worst known alert counts, so a pile of alerts can't stack up a run on its own.
+  const worst = (signals.alerts ?? []).filter((e) => Object.prototype.hasOwnProperty.call(ALERT_POINTS, e)).sort((a, b) => ALERT_POINTS[b] - ALERT_POINTS[a])[0];
+  if (worst) add(ALERT_POINTS[worst], `NWS ${worst}`);
   const score = Math.min(100, reasons.reduce((a, r) => a + r.points, 0));
   return { score, reasons };
 }

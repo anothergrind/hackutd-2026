@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { startRun } from "@/lib/agent/orchestrate";
 import { hoursToLimit, linearTrend, sweepScore } from "@/lib/agent/math";
+import { activeAlerts } from "@/lib/nws";
 import { scenarioForProperty } from "@/lib/scenarios";
 import type { SweepScore } from "@/lib/types";
 
@@ -15,6 +16,16 @@ async function forecastMax(lat: number | null, lon: number | null) {
     return Math.max(...(d.daily?.temperature_2m_max ?? [])) || null;
   } catch {
     return null;
+  }
+}
+
+/** Active NWS alert types at a building. If NWS is down or slow, the sweep carries on without them. */
+async function alertEvents(lat: number | null, lon: number | null) {
+  if (lat == null || lon == null) return [];
+  try {
+    return (await activeAlerts(lat, lon, 5000)).map((a) => a.event);
+  } catch {
+    return [];
   }
 }
 
@@ -52,6 +63,7 @@ export async function runSweep(db: SupabaseClient, opts: { autostart: boolean })
       degradedAssets: (assets.data ?? []).filter((a) => a.property_id === p.id && a.status !== "ok").length,
       hoursToLimit: hrs,
       forecastMaxF: await forecastMax(p.lat, p.lon),
+      alerts: await alertEvents(p.lat, p.lon),
     });
     return { property_id: p.id, name: p.name, building_type: p.building_type, ...s };
   }));
