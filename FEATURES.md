@@ -287,6 +287,50 @@ Use that feedback to improve:
 
 Tracks: NVIDIA, NMC²
 
+## 13. Real Data Instead of Demo Data
+
+Today only three inputs are real: the Nemotron agents, the Open-Meteo forecast and NWS weather alerts.
+Buildings, equipment, sensor readings, tickets, tenants, leases, vendors, parts and energy readings are seeded
+demo data (`src/lib/supabase/memory.ts` and `supabase/migrations/`). Replace them in this order.
+
+### Step 1: Persist data (prerequisite)
+
+- Set `SUPABASE_SERVICE_ROLE_KEY` and run migrations `001`–`007`, so data survives restarts and deploys.
+- Without this, any real data loaded is lost when the server restarts.
+
+### Step 2: Bring-your-own-data import
+
+Real tickets, sensor readings and leases are private to each operator, so there is no public source for them.
+The honest path is an importer:
+
+- CSV/JSON upload for tickets (`maintenance_tickets`), sensor readings (`telemetry_events`), assets and dependencies, tenants and leases
+- Validate every row server-side (types, lengths, known asset ids) and reject the file on errors
+- Keep the demo seed as a "Load demo portfolio" button so judging still works with one click
+- Use CBRE's provided dataset, if available, as the first real import
+
+### Step 3: Free public data that fits the story
+
+| Source | What it adds | Access |
+|---|---|---|
+| Open-Meteo forecast | Heat and wind risk | Already live, no key |
+| NWS active alerts (api.weather.gov) | Heat advisories, storms, floods | Already live, no key |
+| OpenFEMA API | Disaster declarations for a building's county | Free, no key |
+| EIA Open Data API | Regional electricity prices and grid demand, for real energy costs | Free key |
+| City energy benchmarking (e.g. NYC LL84, Chicago, on Socrata open-data portals) | Real building energy use and size for a public portfolio | Free, no key for low volume |
+
+### Step 4: Live building systems (after the hackathon)
+
+- Sensor feeds through a BMS gateway (BACnet / Modbus) or tagging standards such as Project Haystack and Brick
+- Ticket sync from a CMMS (for example ServiceNow, Maximo) through its API
+- Treat all of it as untrusted input: validated, length-capped, and never able to trigger an action without human approval
+
+### Rules
+
+- Never present demo data as real on stage: label the demo portfolio as demo data.
+- Every new source goes through the same validation and approval flow as the existing tools.
+
+Tracks: CBRE ("connects fragmented real estate data"), NVIDIA ("using external APIs and services"), NMC²
+
 # Recommended Combined Product Story
 
 ## OpsCrew Early Warning and Response
