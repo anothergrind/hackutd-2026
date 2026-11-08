@@ -31,6 +31,7 @@ function toolsFor(cfg: AgentConfig, ctx: RunCtx, mode: "live" | "scripted"): Rec
         const earlier = (sub.after ?? []).filter((u) => u !== "lead" && ctx.reports?.[u])
           .map((u) => `- ${ctx.crew.find((a) => a.id === u)?.name ?? u}: ${ctx.reports![u]}`);
         if (earlier.length) task += `\n\nFindings from the agents before you:\n${earlier.join("\n")}`;
+        if (sub.kind === "dispatch") task += tenantsAtRisk(ctx);
         const report = await runAgent(sub.id, task, ctx, mode);
         (ctx.reports ??= {})[sub.id] = report;
         return { report };

@@ -57,8 +57,8 @@ export const ROSTER: AgentMeta[] = [
   { id: "lead", name: "Lead agent", role: "Plans the work and prices the risk", owns: "The incident", color: "var(--a-lead)", icon: "bot", kind: "lead", tools: t("read_building_memory", "price_risk", "save_memory") },
   { id: "triage", name: "Ticket Triage", role: "Links related tickets into one problem", owns: "Work orders", color: "var(--a-triage)", icon: "ticket", kind: "specialist", tools: t("search_tickets", "link_tickets") },
   { id: "sensor", name: "Sensor Watch", role: "Tracks sensor trends and time to failure", owns: "Sensors", color: "var(--a-sensor)", icon: "activity", kind: "specialist", tools: t("get_dependencies", "get_readings", "detect_trend") },
-  { id: "lease", name: "Lease / SLA", role: "Finds affected tenants and who pays", owns: "Leases + weather", color: "var(--a-lease)", icon: "scale", kind: "specialist", tools: t("tenants_at_risk", "lease_responsibility", "get_weather") },
-  { id: "dispatch", name: "Dispatch", role: "Picks a vendor and drafts the repair", owns: "Vendors, parts, notices", color: "var(--a-dispatch)", icon: "truck", kind: "dispatch", tools: t("find_vendor", "check_parts", "draft_work_order", "draft_schedule_change", "draft_tenant_notice") },
+  { id: "lease", name: "Lease / SLA", role: "Finds affected tenants and who pays", owns: "Leases + weather", color: "var(--a-lease)", icon: "scale", kind: "specialist", tools: t("tenants_at_risk", "lease_responsibility", "get_weather", "get_weather_alerts") },
+  { id: "dispatch", name: "Dispatch", role: "Picks a vendor and drafts the repair", owns: "Vendors, parts, notices", color: "var(--a-dispatch)", icon: "truck", kind: "dispatch", tools: t("find_vendor", "check_parts", "tenants_at_risk", "draft_work_order", "draft_schedule_change", "draft_tenant_notice") },
 ];
 export const BUILTIN_IDS = ROSTER.map((a) => a.id);
 
