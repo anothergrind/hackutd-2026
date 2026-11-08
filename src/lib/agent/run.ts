@@ -8,7 +8,7 @@ import { ALL_TOOLS, type RunCtx, type Tool } from "./tools";
 const WRITE_TOOLS = new Set(TOOL_LIBRARY.filter((t) => t.writes).map((t) => t.name));
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Scripted mode pauses between turns so the live view is followable; set OPSCREW_PACE_MS=0 in tests.
-const PACE = Number(process.env.OPSCREW_PACE_MS ?? 700);
+const PACE = Number(process.env.OPSCREW_PACE_MS ?? 1200);
 
 export const configOf = (ctx: RunCtx, id: AgentId): AgentConfig => {
   const c = ctx.crew.find((a) => a.id === id);

@@ -1,154 +1,80 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Decision from "@/components/story/Decision";
-import Stepper from "@/components/story/Stepper";
-import Icon from "@/components/ui/Icon";
-import { ago, hoursText, usd, usePoll, when } from "@/lib/client";
+import { useState } from "react";
+import Pipeline from "@/components/pipeline/Pipeline";
+import { ago, usd, usePoll } from "@/lib/client";
 import type { RunDetail } from "@/lib/types";
+import { scenarioByLabel } from "@/lib/scenarios";
+import { titleCase } from "@/lib/plain";
 import { STATUS, storyOf } from "@/lib/view";
 import AgentDrawer from "./AgentDrawer";
 import CrewGraph from "./CrewGraph";
+import Recommendation from "./Recommendation";
 import StepLog from "./StepLog";
 import Timeline from "./Timeline";
 import s from "./RunView.module.css";
 
-type Detail = RunDetail & { run: RunDetail["run"] & { properties?: { name: string } | null; telemetry_events?: { asset_id: string; source: string; metric: string; message: string } | null } };
+type Detail = RunDetail & { run: RunDetail["run"] & { properties?: { name: string } | null; telemetry_events?: Record<string, any> | null } }; // eslint-disable-line @typescript-eslint/no-explicit-any
 const ORDER = { work_order: 0, schedule_change: 1, tenant_notice: 2 } as const;
+const TABS = [{ id: "steps", label: "What the AI Did" }, { id: "map", label: "Agent Map" }, { id: "log", label: "Full Log" }] as const;
 
-/** Where the run is now: the first step waiting on someone, else the furthest step reached. */
-function autoStep(phases: string[]) {
-  const waiting = phases.indexOf("waiting");
-  if (waiting >= 0) return waiting;
-  const active = phases.indexOf("active");
-  if (active >= 0) return active;
-  return Math.max(0, phases.lastIndexOf("done"));
-}
-
-/** One run, one step at a time: the stepper picks the panel, and follows the run unless you click. */
-export default function RunView({ runId }: { runId: string }) {
+/** One incident: a header with the facts that matter, then the run as numbered steps. */
+export default function RunView({ runId, switcher }: { runId: string; switcher?: React.ReactNode }) {
   const { data, error, refresh } = usePoll<Detail>(`/api/runs/${runId}`, 1200);
-  const [picked, setPicked] = useState<number | null>(null);
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("steps");
   const [agent, setAgent] = useState<string | null>(null);
-  const lastAuto = useRef(-1);
-
-  const story = data ? storyOf(data.run, data.steps, [...data.approvals].sort((a, b) => ORDER[a.kind] - ORDER[b.kind])) : null;
-  const auto = story ? autoStep(story.stages.map((x) => x.phase)) : 0;
-  // A manual pick holds until the run moves to a new step.
-  useEffect(() => {
-    if (!data || auto === lastAuto.current) return;
-    const first = lastAuto.current === -1;
-    lastAuto.current = auto;
-    // ?step=2 opens a given step on load (handy for demos); later moves follow the run.
-    const q = first ? Number(new URLSearchParams(location.search).get("step")) : 0;
-    setPicked(q >= 1 && q <= 5 ? q - 1 : null);
-  }, [auto, data]);
+  const [review, setReview] = useState(0);
 
   if (error) return <section className="card"><p className="empty c-err">{error}</p></section>;
-  if (!data || !story) return <section className="card"><p className="empty">Loading…</p></section>;
+  if (!data) return <section className="card"><p className="empty">Loading…</p></section>;
 
   const { run, steps } = data;
   const approvals = [...data.approvals].sort((a, b) => ORDER[a.kind] - ORDER[b.kind]);
-  const step = picked ?? auto;
+  const story = storyOf(run, steps, approvals);
   const st = STATUS[run.status];
-  const signal = run.telemetry_events;
-  const risk = story.risk;
+  const risk = run.risk;
   const selected = agent ? story.crew.find((c) => c.id === agent) : undefined;
-  const wo = approvals.find((a) => a.kind === "work_order");
 
   return (
-    <div className="stack">
-      <div className={s.top}>
-        <span className={s.title}><b>{run.title}</b><em>{run.properties?.name} · {ago(run.created_at)}</em></span>
-        <span className={`tag ${st.tone}`}><i className={`dot${run.status === "running" ? " live" : ""}`} />{st.label}</span>
-        <span className={`chip ${run.mode === "live" ? "nv" : ""}`}>{run.mode === "live" ? "Nemotron" : "Demo mode"}</span>
-      </div>
+    <div className="stack run">
+      <section className={`card ${s.header} run-head`}>
+        <div className={s.hTop}>
+          <span className={`${s.kicker} eyebrow`}>{run.trigger === "sweep" ? "Nightly Check" : "New Report"} · {run.properties?.name}</span>
+          <span className={s.hRight}>{switcher}<span className={`tag ${st.tone}`}>{run.status === "running" && <i className="dot live" />}{run.status === "running" ? "Analyzing" : run.status === "awaiting_approval" ? "Pending Approval" : run.status === "done" ? "Resolved" : "Failed"}</span></span>
+        </div>
+        <h2 className={`${s.h2} run-title`}>{titleCase(run.title ?? "Incident")}</h2>
+        <p className={s.signal}>{scenarioByLabel(run.title)?.plain.reported ?? run.telemetry_events?.message}</p>
+        <dl className={`${s.stats} run-stats`}>
+          <div data-k="wait"><dt>Could Cost If We Wait</dt><dd>{risk ? usd(risk.wait_usd) : "…"}</dd></div>
+          <div data-k="fix"><dt>Cost to Fix Now</dt><dd>{risk ? usd(risk.fix_usd) : "…"}</dd></div>
+          <div><dt>Time Left Before It Fails</dt><dd>{risk?.hours_until_failure != null ? `${Math.round(risk.hours_until_failure)} hours` : "…"}</dd></div>
+        </dl>
+        {run.status === "error" && <p className={`${s.brief} c-err`}>{run.summary}</p>}
+      </section>
 
-      <Stepper stages={story.stages} live current={step} onPick={setPicked} />
+      <div className={s.body}>
+      {run.status !== "error" && <Recommendation run={run} approvals={approvals} agents={story.agents} crew={story.crew} verification={data.verification} onChange={refresh} onReview={() => { setTab("steps"); setReview((n) => n + 1); }} />}
 
-      <section className={`card ${s.panel}`}>
-        {step === 0 && (
-          <div className={s.signal}>
-            <span className={s.big}><Icon name={run.trigger === "sweep" ? "radar" : "zap"} size={22} /></span>
-            <div>
-              <span className="label">{run.trigger === "sweep" ? "Flagged by the nightly sweep" : "New incident"}</span>
-              <p className={s.msg}>{signal?.message ?? run.title}</p>
-              <div className={s.chips}>
-                <span className="chip">{run.properties?.name}</span>
-                {signal && <span className="chip">{signal.asset_id}</span>}
-                {signal && <span className="chip">{signal.source}</span>}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 1 && (
+      <section className="card run-main">
+        <div className={`${s.tabs} run-tabs`} role="tablist">
+          {TABS.map((t) => (
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={s.tab} onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+          <span className={s.meta}>
+            <span className={s.legend}><i data-k="done" />Done <i data-k="run" />Working <i data-k="wait" />Pending <i data-k="idle" />Not Started</span>
+          </span>
+        </div>
+        <p className={s.howto}>{tab === "steps" ? "What the AI did, in order. Click any step to open its details." : tab === "map" ? "How the AI agents passed work between each other. Click an agent for details." : `Every step the AI took, with exact timing. ${run.mode === "live" ? "Powered by NVIDIA Nemotron." : "Demo mode."} Started ${ago(run.created_at)}.`}</p>
+        {tab === "steps" && <Pipeline run={run} steps={steps} approvals={approvals} crew={story.crew} agents={story.agents} onAgent={setAgent} refresh={refresh} focusApproval={review} verification={data.verification} />}
+        {tab === "map" && <CrewGraph run={run} crew={story.crew} agents={story.agents} approvals={approvals} risk={risk} onSelect={setAgent} selected={agent} />}
+        {tab === "log" && (
           <>
-            <div className="ch"><h2>The agents at work</h2><span className="n">click an agent to see exactly what it did</span></div>
-            <CrewGraph run={run} crew={story.crew} agents={story.agents} approvals={approvals} risk={risk} onSelect={setAgent} selected={agent} />
-            <div className={s.tiles}>
-              {story.findings.map((f) => {
-                const m = story.crew.find((c) => c.id === f.agent);
-                return (
-                  <button key={f.key} type="button" className={s.tile} data-phase={f.phase} style={{ "--c": m?.color } as React.CSSProperties} onClick={() => setAgent(f.agent)}>
-                    <em>{f.label}</em><b>{f.value}</b>
-                  </button>
-                );
-              })}
-            </div>
-            <details className={s.more}>
-              <summary>Timeline and full log</summary>
-              <Timeline run={run} steps={steps} agents={story.agents} crew={story.crew} />
-              <StepLog steps={steps} t0={run.created_at} crew={story.crew} />
-            </details>
+            <Timeline run={run} steps={steps} agents={story.agents} crew={story.crew} />
+            <StepLog steps={steps} t0={run.created_at} crew={story.crew} />
           </>
         )}
-
-        {step === 2 && (
-          <div className={s.price}>
-            {risk ? (
-              <>
-                <div className={s.money}>
-                  <div className={s.wait}><span className="label">If we wait</span><b>{usd(risk.wait_usd)}</b></div>
-                  <div className={s.fix}><span className="label">Fix now</span><b>{usd(risk.fix_usd)}</b></div>
-                </div>
-                <div className={s.facts}>
-                  <span><em>Saves</em><b>{usd(risk.saved_usd)}</b></span>
-                  <span><em>Fails in</em><b>{hoursText(risk.hours_until_failure)}</b></span>
-                  <span><em>Urgency</em><b>{risk.urgency}</b></span>
-                </div>
-                <p className={s.formula}>{risk.formula}</p>
-                {story.brief && <p className={s.brief}>{story.brief}</p>}
-              </>
-            ) : <p className="empty">Waiting for the agents to report.</p>}
-          </div>
-        )}
-
-        {step === 3 && <Decision risk={null} approvals={approvals} running={run.status === "running"} onChange={refresh} bare />}
-
-        {step === 4 && (
-          <div className={s.done}>
-            {story.counts.sent ? (
-              <>
-                <span className={s.ok}><Icon name="badge" size={26} /></span>
-                <h2>Fixed before it failed</h2>
-                <ul>
-                  {wo?.status === "sent" && <li><Icon name="wrench" size={14} />{String(wo.payload.vendor_name)} booked for {when(String(wo.payload.scheduled_for ?? ""))}</li>}
-                  {approvals.filter((a) => a.kind === "schedule_change" && a.status === "sent").map((a) => <li key={a.id}><Icon name="calendar" size={14} />{a.title}</li>)}
-                  {approvals.filter((a) => a.kind === "tenant_notice" && a.status === "sent").map((a) => <li key={a.id}><Icon name="mail" size={14} />{String(a.payload.tenant_name)} notified</li>)}
-                  <li><Icon name="brain" size={14} />Saved to building memory</li>
-                </ul>
-              </>
-            ) : <p className="empty">{run.status === "running" || story.counts.pending ? "Not yet. Approve the fix first." : "Nothing was sent for this run."}</p>}
-          </div>
-        )}
-
-        <footer className={s.nav}>
-          <button type="button" className="btn sm ghost" disabled={step === 0} onClick={() => setPicked(step - 1)}><Icon name="arrow-left" size={13} />Back</button>
-          <span className="muted mono">{step + 1} / 5</span>
-          <button type="button" className="btn sm" disabled={step === 4} onClick={() => setPicked(step + 1)}>Next<Icon name="arrow-right" size={13} /></button>
-        </footer>
       </section>
+      </div>
 
       {selected && <AgentDrawer m={selected} v={story.agents[selected.id]} t0={run.created_at} onClose={() => setAgent(null)} />}
     </div>

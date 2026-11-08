@@ -25,7 +25,7 @@ export default function Memory() {
 
   return (
     <>
-      <PageHeader title="Building memory" sub="What the agents remember about each building. Read at the start of every run." />
+      <PageHeader title="Building Memory" sub="What the agents remember about each building. Read at the start of every run." />
       <div className="grid2">
         <section className="card">
           <div className="ch"><h2>Notes</h2><span className="n">{data?.memory.length ?? 0}</span></div>
@@ -43,7 +43,7 @@ export default function Memory() {
           </div>
         </section>
         <form className="card" onSubmit={(e) => { void save(e); }}>
-          <div className="ch"><h2>Add a note</h2></div>
+          <div className="ch"><h2>Add a Note</h2></div>
           <div className={s.form}>
             <label><span className="label">Building</span>
               <select className="input" value={form.property_id} onChange={(e) => setForm({ ...form, property_id: e.target.value })}>

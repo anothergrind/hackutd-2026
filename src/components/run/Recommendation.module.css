@@ -1,0 +1,23 @@
+/* The recommendation sits on a light green panel so the decision stands out from the white cards. */
+.card:global(.card) {
+  display: flex; flex-direction: column; padding: 24px 28px 26px; background: #e4f1eb; border: 1px solid #c3ddd1; color: var(--ink-2);
+}
+:global([data-theme="dark"]) .card:global(.card) { background: #06362f; border-color: #0f4d43; }
+.card[data-tone="bad"] .verdict { color: var(--err); }
+.top { display: flex; align-items: center; justify-content: space-between; }
+.badge { display: inline-flex; align-items: center; gap: 6px; font: 600 12px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.verdict { margin-top: 8px; font: 600 34px/1.15 var(--serif); letter-spacing: -.01em; color: var(--ink); }
+.why { margin-top: 6px; font-size: 17px; color: var(--ink); }
+.problem { margin-top: 10px; font-size: 15.5px; line-height: 1.5; color: var(--ink-2); }
+.problem b { color: var(--ink); font-weight: 600; }
+.clause { display: block; margin-top: 4px; font-size: 14px; font-style: italic; color: var(--ink-3); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 20px; padding-top: 18px; border-top: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); }
+.cols h3 { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+.cols ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cols li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 6px; font-size: 15px; line-height: 1.5; color: var(--ink); }
+.cols li svg { margin-top: 4px; color: var(--ok); }
+.cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: auto; padding-top: 24px; }
+.cta :global(.btn.accent) { height: 46px; padding: 0 24px; font-size: 15.5px; }
+.cta :global(.btn:not(.accent)) { height: 46px; padding: 0 20px; font-size: 15px; background: transparent; }
+.note { font-size: 14px; color: var(--ink-3); }
+@media (max-width: 800px) { .cols { grid-template-columns: 1fr; } }

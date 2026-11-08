@@ -20,7 +20,7 @@ flow in the terminal and prints every step.
 
 1. Copy `.env.example` to `.env.local`.
 2. **Nemotron:** set `NVIDIA_API_KEY`, then `npm run smoke` to check tool calling. The rail badge switches from `DEMO` to `NIM`.
-3. **Supabase:** set the URL plus the anon and service-role keys, and run `supabase/migrations/001`–`006` in order in the SQL editor.
+3. **Supabase:** set the URL plus the anon and service-role keys, and run `supabase/migrations/001`–`007` in order in the SQL editor.
 4. Restart `npm run dev`.
 
 If Nemotron errors mid-run, that agent falls back to the scripted policy (same tools, same data) unless it has
@@ -31,6 +31,7 @@ already drafted something. Set `OPSCREW_MODE=scripted` to force the fallback on 
 | Page | What |
 |---|---|
 | `/` | Live incident, one step at a time: Signal → Investigate (agent graph; click an agent for details) → Price → Approve → Fixed. `?step=2` opens a step directly |
+| `/plan` | Tonight's plan: Storm night raises problems in 3 buildings; given technicians and a budget, the AI picks what to fix tonight vs make safe until morning, explains why, and applies the plan on approval |
 | `/approvals` | Queue: edit, approve (executes) or reject every drafted action |
 | `/portfolio` | Sweep scores, each building's dependency chain, tenants and $/hr, work orders sent |
 | `/runs`, `/runs/[id]` | History and step-by-step replay |
@@ -59,7 +60,9 @@ supabase/migrations/005_opscrew.sql   approvals, vendors, parts, memory, sweeps 
 API: `POST /api/incidents {scenario_id}`, `GET /api/runs[/id]`, `GET /api/approvals`, `POST /api/approvals/:id {decision, edits?}`,
 `POST /api/sweep`, `GET /api/sweep/cron` (Vercel Cron, `CRON_SECRET`), `GET /api/portfolio`, `GET|POST /api/memory`, `POST /api/reset`, `GET /api/status`.
 
-`npm test` runs the graph and math unit tests. `npm run typecheck` checks types.
+Each run also says **who pays** for the repair (Lease agent's `lease_responsibility` tool quotes the lease clause) and, after a repair is approved, **checks the fix worked** by re-reading the sensors (step 8; simulated readings in demo mode, `OPSCREW_VERIFY_DELAY_S`).
+
+`npm run dry-run:plan` runs Storm night → plan → apply → fix checks in the terminal. `npm test` runs the graph and math unit tests. `npm run typecheck` checks types.
 
 **If you deploy publicly:** `/api/incidents` and `/api/sweep` spend NVIDIA credits and anyone can call them.
 That's fine for judging; take it down afterwards.

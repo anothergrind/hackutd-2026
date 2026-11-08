@@ -11,6 +11,7 @@ const DC1 = "00000000-0000-0000-0000-000000000003", AVON = "00000000-0000-0000-0
 const now = Date.now(), h = 3_600_000, iso = (ms: number) => new Date(ms).toISOString();
 const asset = (id: string, property_id: string, kind: string) => ({ id, property_id, name: id, kind, location: "", status: "ok" });
 
+const TEN = { lone: randomUUID(), med: randomUUID(), bright: randomUUID(), park: randomUUID() };
 const T: Record<string, Row[]> = ((globalThis as unknown as { __opscrewTables?: Record<string, Row[]> }).__opscrewTables ??= {
   properties: [
     { id: AVON, name: "Avon Center", address: "100 Market Street, Dallas, TX", building_type: "Mixed-use", lat: 32.7767, lon: -96.797 },
@@ -30,10 +31,10 @@ const T: Record<string, Row[]> = ((globalThis as unknown as { __opscrewTables?: 
     ["AHU-04", "FLOOR-4-EAST", "serves"], ["PANEL-12B", "HVAC-12", "powers"], ["PANEL-12B", "FLOOR-12", "powers"], ["HVAC-12", "FLOOR-12", "serves"],
   ].map(([upstream, downstream, relation]) => ({ upstream, downstream, relation })),
   tenants: [
-    { id: randomUUID(), property_id: DC1, asset_id: "HALL-A", name: "Lonestar Cloud", sla_penalty_per_hour: 25000, contact_email: "noc@lonestar.example" },
-    { id: randomUUID(), property_id: DC1, asset_id: "HALL-B", name: "MedRecords Health", sla_penalty_per_hour: 12000, contact_email: "it-ops@medrecords.example" },
-    { id: randomUUID(), property_id: AVON, asset_id: "FLOOR-4-EAST", name: "Brightline Legal", sla_penalty_per_hour: 800, contact_email: "office@brightline.example" },
-    { id: randomUUID(), property_id: NORTH, asset_id: "FLOOR-12", name: "Parkway Capital", sla_penalty_per_hour: 1500, contact_email: "facilities@parkway.example" },
+    { id: TEN.lone, property_id: DC1, asset_id: "HALL-A", name: "Lonestar Cloud", sla_penalty_per_hour: 25000, contact_email: "noc@lonestar.example" },
+    { id: TEN.med, property_id: DC1, asset_id: "HALL-B", name: "MedRecords Health", sla_penalty_per_hour: 12000, contact_email: "it-ops@medrecords.example" },
+    { id: TEN.bright, property_id: AVON, asset_id: "FLOOR-4-EAST", name: "Brightline Legal", sla_penalty_per_hour: 800, contact_email: "office@brightline.example" },
+    { id: TEN.park, property_id: NORTH, asset_id: "FLOOR-12", name: "Parkway Capital", sla_penalty_per_hour: 1500, contact_email: "facilities@parkway.example" },
   ],
   maintenance_tickets: [
     { id: randomUUID(), property_id: DC1, equipment: "CRAH-A1", floor: "Data hall A", title: "Water on raised floor near CRAH-A1", notes: "Small puddle.", status: "open", urgency: 2, reported_at: iso(now - 13 * 24 * h) },
@@ -79,6 +80,23 @@ const T: Record<string, Row[]> = ((globalThis as unknown as { __opscrewTables?: 
     { id: randomUUID(), run_id: null, approval_id: null, vendor_id: null, asset_id: "CHILLER-1", priority: 4, title: "Replace CHILLER-1 compressor bearing", steps: ["Replace bearing", "Check refrigerant charge"], status: "done", scheduled_for: null, created_at: iso(now - 28 * 24 * h) },
   ],
   agent_configs: [],
+  leases: [
+    { id: randomUUID(), tenant_id: TEN.lone, lease_ref: "DC1-HALL-A-2024", clauses: [
+      { assets: ["CRAH-A1"], party: "tenant", ref: "§8.2", text: "Tenant shall maintain, repair and replace the supplemental cooling units installed for Tenant's exclusive use in Data Hall A, at Tenant's sole cost." },
+      { kinds: ["cooling", "power", "controls"], party: "landlord", ref: "§7.1", text: "Landlord shall maintain the base building systems, including the central chiller plant, electrical service and building controls." },
+    ] },
+    { id: randomUUID(), tenant_id: TEN.med, lease_ref: "DC1-HALL-B-2023", clauses: [
+      { kinds: ["cooling", "power", "controls"], party: "landlord", ref: "§7.1", text: "Landlord shall maintain all base building systems serving Data Hall B, including cooling, power and controls." },
+    ] },
+    { id: randomUUID(), tenant_id: TEN.bright, lease_ref: "AVON-F4E-2022", clauses: [
+      { assets: ["AHU-04"], party: "landlord", ref: "§10.4", text: "Landlord is responsible for the building HVAC, including air handlers serving the Premises; costs are recoverable as operating expenses." },
+    ] },
+    { id: randomUUID(), tenant_id: TEN.park, lease_ref: "NST-F12-2025", clauses: [
+      { assets: ["PANEL-12B"], party: "tenant", ref: "§9.3", text: "Tenant is responsible for electrical panels and distribution installed within the Premises after the Commencement Date." },
+      { kinds: ["hvac"], party: "landlord", ref: "§9.1", text: "Landlord maintains base building HVAC serving Floor 12." },
+    ] },
+  ],
+  verifications: [], triage_plans: [],
   agent_runs: [], agent_steps: [], approvals: [], tenant_notices: [], schedule_changes: [], sweeps: [],
 });
 const DEFAULTS: Record<string, Row> = {
@@ -86,6 +104,8 @@ const DEFAULTS: Record<string, Row> = {
   approvals: { status: "pending", protects_usd: 0, cost_usd: 0, decided_by: null, decided_at: null },
   sweeps: { status: "running", scores: [], started_run_id: null },
   work_orders: { status: "open" },
+  verifications: { status: "scheduled", after: [], note: null, checked_at: null },
+  triage_plans: { status: "proposed" },
 };
 const FK: Record<string, string> = { properties: "property_id", vendors: "vendor_id", telemetry_events: "event_id", agent_runs: "run_id" };
 type Embed = { name: string; children: Embed[] };
@@ -142,6 +162,8 @@ class Query {
   gte(c: string, v: string) { this.filters.push((r) => String(r[c]) >= v); return this; }
   contains(c: string, vs: unknown[]) { this.filters.push((r) => vs.every((v) => (r[c] ?? []).includes(v))); return this; }
   not(c: string, _op: string, _v: null) { this.filters.push((r) => r[c] != null); return this; }
+  lte(c: string, v: string) { this.filters.push((r) => String(r[c]) <= v); return this; }
+  like(c: string, pattern: string) { const re = new RegExp(`^${pattern.split("%").map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`); this.filters.push((r) => re.test(String(r[c] ?? ""))); return this; }
   order(col: string, o?: { ascending?: boolean }) { this.ordering = { col, asc: o?.ascending !== false }; return this; }
   limit(n: number) { this.lim = n; return this; }
   single() { this.one = true; return this; }

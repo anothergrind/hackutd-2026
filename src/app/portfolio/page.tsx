@@ -41,7 +41,7 @@ export default function Portfolio() {
 
       {data?.sweep && (
         <section className="card rise">
-          <div className="ch"><h2>Last sweep</h2><span className="n">{ago(data.sweep.created_at)}</span></div>
+          <div className="ch"><h2>Last Sweep</h2><span className="n">{ago(data.sweep.created_at)}</span></div>
           <div className="rows">
             {data.sweep.scores.map((x) => (
               <div key={x.property_id} className={s.score}>
@@ -92,7 +92,7 @@ export default function Portfolio() {
 
       {!!data?.work_orders.length && (
         <section className="card">
-          <div className="ch"><h2>Work orders sent</h2><span className="n">{data.work_orders.length}</span></div>
+          <div className="ch"><h2>Work Orders Sent</h2><span className="n">{data.work_orders.length}</span></div>
           <div className="rows">
             {data.work_orders.map((w) => (
               <div key={w.id} className={s.wo}>

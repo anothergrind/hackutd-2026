@@ -12,6 +12,6 @@
 .ev.err::before { content: ""; position: absolute; inset: 0; border-radius: 2px; background: var(--err); transform: rotate(45deg) scale(.9); }
 .axis { display: grid; grid-template-columns: 140px minmax(0, 1fr); margin-top: 6px; }
 .ticks { position: relative; height: 16px; }
-.ticks span { position: absolute; transform: translateX(-50%); font: 400 10.5px var(--mono); color: var(--ink-3); }
+.ticks span { position: absolute; transform: translateX(-50%); font: 400 11.5px var(--mono); color: var(--ink-3); }
 .ticks span:first-child { transform: none; }
 @media (max-width: 720px) { .ln, .axis { grid-template-columns: 100px minmax(0, 1fr); } }

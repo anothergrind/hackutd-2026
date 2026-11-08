@@ -1,0 +1,44 @@
+/* App shell: top navigation and full-width pages. */
+
+.app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+.page { width: 100%; padding: 28px 32px 72px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+/* Top navigation */
+.rail { position: sticky; top: 0; z-index: 40; height: 60px; display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--rail); color: var(--rail-ink); }
+.rail-brand { display: flex; align-items: center; gap: 10px; flex: none; }
+.rail-name { display: flex; flex-direction: column; line-height: 1.1; }
+.rail-name b { font: 600 20px var(--serif); color: #fff; }
+.rail-name em { display: none; }
+.rail-nav { display: flex; align-items: stretch; height: 100%; }
+.rail-item { position: relative; display: flex; align-items: center; gap: 8px; height: 60px; padding: 0 14px; border: 0; background: transparent; color: var(--rail-ink); font-size: 15px; cursor: pointer; white-space: nowrap; }
+.rail-item:hover { color: #fff; background: var(--rail-active); }
+.rail-item[aria-current="page"] { color: #fff; font-weight: 500; box-shadow: inset 0 -3px 0 var(--mint); }
+.rail-nav .rail-item svg { display: none; }
+.rail-badge { min-width: 20px; height: 18px; padding: 0 6px; background: var(--mint); color: #012a2d; font: 700 11.5px/18px var(--sans); font-style: normal; text-align: center; }
+.rail-bot { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.rail-bot .rail-item { width: 40px; padding: 0; justify-content: center; }
+.rail-bot .rail-label { display: none; }
+.rail-mode { display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--rail-ink-2); }
+.rail-mode[data-live] { color: var(--mint); }
+.rail-mode span { display: flex; flex-direction: column; line-height: 1.2; }
+.rail-mode b { font-size: 14px; font-weight: 500; color: #fff; }
+.rail-mode em { display: none; }
+
+/* Page titles */
+.console-head h1 { font: 600 32px/1.15 var(--serif); letter-spacing: -.01em; color: var(--ink); }
+.console-head p { color: var(--ink-2); }
+
+@media (max-width: 1100px) {
+  .rail { gap: 12px; padding: 0 16px; }
+  .rail-item { padding: 0 9px; font-size: 14px; }
+  .rail-mode { display: none; }
+}
+@media (max-width: 720px) {
+  .app { padding-bottom: 60px; }
+  .page { padding: 18px 16px 40px; }
+  .rail { position: fixed; top: auto; bottom: 0; left: 0; right: 0; justify-content: space-around; padding: 0 6px; overflow-x: auto; }
+  .rail-brand, .rail-nav .rail-label { display: none; }
+  .rail-nav .rail-item svg { display: block; }
+  .rail-item[aria-current="page"] { box-shadow: inset 0 3px 0 var(--mint); }
+  .rail-bot { margin: 0; }
+}

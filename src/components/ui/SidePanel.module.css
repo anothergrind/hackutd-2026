@@ -1,0 +1,11 @@
+.scrim { position: fixed; inset: 0; z-index: 70; background: rgba(1, 42, 45, .16); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); animation: fadeIn .22s ease-out both; }
+.panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 75; width: min(640px, 100vw); display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--line); box-shadow: -24px 0 48px -24px rgba(1, 42, 45, .35); animation: slideIn .26s var(--ease) both; }
+.scrim[data-leaving] { animation: fadeOut .22s ease-in both; }
+.panel[data-leaving] { animation: slideOut .22s ease-in both; }
+@keyframes slideIn { from { transform: translateX(40px); opacity: 0; } }
+@keyframes slideOut { to { transform: translateX(40px); opacity: 0; } }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+.head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px 24px; flex: none; }
+.body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 24px; border-top: 1px solid var(--line); background: var(--surface-2); flex: none; }

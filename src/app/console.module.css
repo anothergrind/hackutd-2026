@@ -1,8 +1,21 @@
-.hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 4px 0; }
-.hero h1 { font-size: 30px; line-height: 1.15; font-weight: 500; letter-spacing: -.03em; color: var(--ink); }
-.hero p { margin-top: 6px; font-size: 14.5px; color: var(--ink-2); }
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.head h1 { font-size: 26px; font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
+.head p { margin-top: 2px; font-size: 15.5px; color: var(--ink-2); }
 .actions { display: flex; align-items: center; gap: 8px; }
-.actions select { width: auto; height: 40px; }
-.big { height: 40px; padding: 0 18px; font-size: 14px; border-radius: 10px; }
-.note { font-size: 13px; color: var(--ink-2); }
-@media (max-width: 720px) { .hero h1 { font-size: 24px; } }
+.split { display: flex; }
+.split select { width: auto; height: 36px; border-radius: var(--r) 0 0 8px; border-right: 0; }
+.split button { border-radius: 0 8px 8px 0; }
+.note { font-size: 14.5px; color: var(--ink-2); }
+.empty { padding: 22px 24px; }
+.empty h2 { font-size: 17.5px; font-weight: 600; color: var(--ink); }
+.empty p { margin-top: 4px; font-size: 15px; color: var(--ink-2); }
+.empty ol { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.empty li { display: grid; grid-template-columns: 16px 18px 170px minmax(0, 1fr); gap: 10px; align-items: center; font-size: 15px; }
+.empty li b { font-weight: 600; color: var(--ink); }
+.empty li em { font-style: normal; color: var(--ink-3); }
+.n { font-size: 13px; font-weight: 600; color: var(--ink-3); text-align: right; }
+@media (max-width: 720px) { .empty li { grid-template-columns: 16px 18px minmax(0, 1fr); } .empty li em { display: none; } }
+.switch { display: inline-flex; align-items: center; gap: 8px; }
+.switch :global(.btn.sm) { width: 30px; padding: 0; }
+.count { font-size: 14px; font-weight: 500; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.flip { transform: rotate(180deg); }
